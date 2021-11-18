@@ -35,9 +35,9 @@ class TrainGenerator(Sequence):
 
     def __data_generation(self, idxs):
         xs = np.zeros((self.batch, 64, 84))
-        ys = np.ones(self.batch)
+        ys = np.zeros(self.batch)
         for i, path in enumerate(np.array(self.paths)[idxs]):
-            music = np.load(path)
+            music = np.load(path).astype(np.float32)
             xs[i,:,:] = music[:,:,0]
             ys[i] = self.nameToCat[os.path.split(path)[-1].split("_")[0]]
         return xs, ys
