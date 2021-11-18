@@ -34,24 +34,24 @@ class TrainGenerator(Sequence):
             np.random.shuffle(self.idxs)
 
     def __data_generation(self, idxs):
-        xs = np.zeros((self.batch, 64, 84))
+        # (batch, timestep*consecutive block, notes, channel)
+        xs = np.zeros((self.batch, 64, 84, 1))
         ys = np.zeros(self.batch)
         for i, path in enumerate(np.array(self.paths)[idxs]):
             music = np.load(path).astype(np.float32)
-            xs[i,:,:] = music[:,:,0]
+            xs[i,:,:] = music
             ys[i] = self.nameToCat[os.path.split(path)[-1].split("_")[0]]
         return xs, ys
 
 
 if __name__=="__main__":
     CP_C = TrainGenerator(path='./dataset/preprocess/CP_C/train/', batch=5, shuffle=True)
-    for xs, ys in CP_C:
-        print(xs.shape)
-        print(ys.shape)
     CP_P = TrainGenerator(path='./dataset/preprocess/CP_P/train/', batch=5, shuffle=True)
-    for xs, ys in CP_C:
-        print(xs.shape)
-        print(ys.shape)
+    for (axs, ays), (bxs, bys) in zip(CP_C, CP_P):
+        print(axs.shape)
+        print(bxs.shape)
+        print(ays)
+        print(bys)
     JCP_MIX = TrainGenerator(path='./dataset/preprocess/JCP_mixed/', batch=5, shuffle=True)
     for xs, ys in JCP_MIX:
         print(xs.shape)
