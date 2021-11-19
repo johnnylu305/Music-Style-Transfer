@@ -9,7 +9,7 @@ from utils import AudioPool
 
 
 parser = argparse.ArgumentParser(description='Music Style Transfer')
-parser.add_argument('--dataset_dir', dest='dataset_dir', default='./dataset/', help='path of the dataset')
+parser.add_argument('--dataset_dir', dest='dataset_dir', default='../dataset/', help='path of the dataset')
 parser.add_argument('--type', dest='type', default='ResNet', help='ResNet')
 parser.add_argument('--phase', dest='phase', default='train', help='train or test')
 parser.add_argument('--lr', dest='lr', type=float, default=0.0002, help='initial learning rate for adam')
@@ -103,9 +103,17 @@ def main():
         init_epoch = int(os.path.split(args.load_checkpoint)[-1].split("-")[0])
 
     # create data loader
-    dataA = TrainGenerator(path='./dataset/preprocess/JC_J/train/', batch=args.batch_size, shuffle=True)
-    dataB = TrainGenerator(path='./dataset/preprocess/JC_C/train/', batch=args.batch_size, shuffle=True)
-    dataABC = TrainGenerator(path='./dataset/preprocess/JCP_mixed/', batch=args.batch_size, shuffle=True)
+    dataA = TrainGenerator(path=os.path.join(args.dataset_dir,
+                                             'preprocess',
+                                             'JC_J',
+                                             'train'), batch=args.batch_size, shuffle=True)
+    dataB = TrainGenerator(os.path.join(args.dataset_dir, 
+                                        'preprocess', 
+                                        'JC_C', 
+                                        'train'), batch=args.batch_size, shuffle=True)
+    dataABC = TrainGenerator(os.path.join(args.dataset_dir, 
+                                          'preprocess', 
+                                          'JCP_mixed'), batch=args.batch_size, shuffle=True)
 
     
 

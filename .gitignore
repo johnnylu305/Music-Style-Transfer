@@ -1,4 +1,8 @@
 dataset/*
-__pycache__
+MusicStyleResNet/__pycache__
+MusicStyleResNet/checkpoints
+MusicStyleResNet/logs
 
 !dataset/README.md
+!MusicStyleResNet/checkpoints/README.md
+!MusicStyleResNet/logs/README.md
