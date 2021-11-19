@@ -20,8 +20,8 @@ parser.add_argument('--epoch', dest='epoch', type=int, default=100, help='# epoc
 parser.add_argument('--load_checkpoint', dest='load_checkpoint', default=None, help='load checkpoint')
 args = parser.parse_args()
 
-GOPT = tf.keras.optimizers.Adam(learning_rate=args.lr)
-DOPT = tf.keras.optimizers.Adam(learning_rate=args.lr)
+GOPT = tf.keras.optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
+DOPT = tf.keras.optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
 
 
 def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool):

@@ -11,7 +11,7 @@ class Generator(Model):
     
         # optimizer
         if args:
-            self.optimizer = optimizers.Adam(learning_rate=args.lr)
+            self.optimizer = optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
 
         # architexture
         self.architecture = Sequential([Encoder(name),
@@ -46,7 +46,7 @@ class Discriminator(Model):
     
         # optimizer
         if args:
-            self.optimizer = optimizers.Adam(learning_rate=args.lr)
+            self.optimizer = optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
 
         # architexture
         self.architecture = Sequential([layers.Conv2D(
