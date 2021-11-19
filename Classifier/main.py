@@ -3,10 +3,10 @@ import os
 import argparse
 import datetime
 import numpy as np
-from tensorflow.keras import callbacks, optimizers
+from tensorflow.keras import callbacks, optimizers, Input
 from model import Classifier
 from preprocess import TrainGenerator
-from utils import scheduler
+
 
 parser = argparse.ArgumentParser(description='Classifier as a metric')
 parser.add_argument('--dataset_dir', dest='dataset_dir', default='../dataset/', help='path of the dataset')
@@ -81,6 +81,7 @@ def main():
    
     # define model
     model = Classifier(args, args.type)
+    model(Input(shape=(64, 84, 1)))
 
     # load checkpoints
     if args.load_checkpoint:
