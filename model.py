@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
-from tensorflow.keras import Model, Sequential, Input, layers, initializers, activations
+from tensorflow.keras import Model, Sequential, Input, layers, initializers, activations, optimizers
 from module import Encoder, ResBlock, Decoder
 
 
@@ -32,8 +32,8 @@ class Generator(Model):
         x = self.architecture(x)
         return x
 
-    @staticmethod
-    def loss_fn(generation, reconstruction, original):
+    #@staticmethod
+    def loss_fn(self, generation, reconstruction, original):
           G_loss = tf.reduce_mean(tf.square(generation-tf.ones_like(generation)))
           Cycle_loss = tf.reduce_mean(tf.abs(original-reconstruction))
           return G_loss+10*Cycle_loss
@@ -81,14 +81,14 @@ class Discriminator(Model):
         x = self.architecture(x)
         return x
 
-    @staticmethod
-    def loss_fn(original, generation, mix_original, mix_generation):
+    #@staticmethod
+    def loss_fn(self, original, generation):#, mix_original, mix_generation):
         D_loss = tf.reduce_mean(tf.square(original-tf.ones_like(original)))
         D_loss += tf.reduce_mean(tf.square(generation-tf.zeros_like(generation)))
-        Reg_loss = tf.reduce_mean(tf.square(mix_original-tf.ones_like(mix_original)))
-        Reg_loss += tf.reduce_mean(tf.square(mix_generation-tf.zeros_like(mix_generation)))
-        return 0.5*D_loss+1.0*0.5*Reg_loss
-
+        #Reg_loss = tf.reduce_mean(tf.square(mix_original-tf.ones_like(mix_original)))
+        #Reg_loss += tf.reduce_mean(tf.square(mix_generation-tf.zeros_like(mix_generation)))
+        #return 0.5*D_loss+1.0*0.5*Reg_loss
+        return 0.5*D_loss
 
 if __name__=="__main__":
     # comment anything related to args in model
