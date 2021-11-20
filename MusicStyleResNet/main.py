@@ -22,9 +22,10 @@ parser.add_argument('--load_checkpoint', dest='load_checkpoint', default=None, h
 parser.add_argument('--load_classifier', dest='load_classifier', default=None, help='load checkpoint for classifier')
 args = parser.parse_args()
 
-GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, args.batch_size), 
+iteration = 11216//args.batch_size
+GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, iteration), 
                                 beta_1=args.beta1)
-DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, args.batch_size), 
+DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, iteration), 
                                 beta_1=args.beta1)
 
 
@@ -68,8 +69,8 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
 
             dis_loss = disA.loss_fn(dis_realA, dis_his_fakeA)+disB.loss_fn(dis_realB, dis_his_fakeB)
             dis_loss += disAm.loss_fn(dis_realAm, dis_his_fakeAm)+disBm.loss_fn(dis_realBm, dis_his_fakeB) 
-            if i%100==0:
-                print("Gen:{}, Dis:{}".format(gen_loss.numpy(), dis_loss.numpy()))
+            if i%400==0:
+                print("Gen: {:.3f}, Dis: {:.3f}".format(gen_loss.numpy(), dis_loss.numpy()))
         # gradient
         gen_var = genA.trainable_variables+genB.trainable_variables
         dis_var = disA.trainable_variables+disB.trainable_variables
@@ -84,22 +85,38 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
         DOPT.apply_gradients(zip(gradients, dis_var))
 
 
-def test(classifier, test_genA, test_genB, test_generator=None):
-    if test_generator:
-        # test on dataset with labels
-        classifier.evaluate_generator(
-            generator=test_generator,
-            verbose=1,
-        )
-    classifier.evaluate_generator(
-        generator=test_genA,
-        verbose=1,
-    )
-    classifier.evaluate_generator(
-        generator=test_genB,
-        verbose=1,
-    )
+def test(classifier, genA, genB, test_genA, test_genB, test_generator=None):
+    acc_A = tf.keras.metrics.Accuracy()
+    acc_AB = tf.keras.metrics.Accuracy()
+    acc_ABA = tf.keras.metrics.Accuracy()
+    for xs, ys in test_genA: 
+        acc_A.update_state(classifier(xs), ys)
+        AB = genB(xs)
+        acc_AB.update_state(classifier(AB), ys)
+        ABA = genA(AB)
+        acc_ABA.update_state(classifier(ABA), ys)
+    acc_A = acc_A.result().numpy()
+    acc_AB = acc_AB.result().numpy()
+    acc_ABA = acc_ABA.result().numpy()
+    SA = (acc_A+acc_ABA-2*acc_AB)/2
+    print("A: {:.3f}, AB: {:.3f}, ABA: {:.3f}, SA: {:.3f}".format(acc_A, acc_AB, acc_ABA, SA))
 
+    acc_B = tf.keras.metrics.Accuracy()
+    acc_BA = tf.keras.metrics.Accuracy()
+    acc_BAB = tf.keras.metrics.Accuracy()
+    for xs, ys in test_genB: 
+        acc_B.update_state(classifier(xs), ys)
+        BA = genA(xs)
+        acc_BA.update_state(classifier(BA), ys)
+        BAB = genB(BA)
+        acc_BAB.update_state(classifier(BAB), ys)
+    acc_B = acc_B.result().numpy()
+    acc_BA = acc_BA.result().numpy()
+    acc_BAB = acc_BAB.result().numpy()
+    SB = (acc_B+acc_BAB-2*acc_BA)/2
+    print("B: {:.3f}, BA: {:.3f}, BAB: {:.3f}, SB: {:.3f}".format(acc_B, acc_BA, acc_BAB, SB))
+    S = (SA+SB)/2
+    print("S: {:.3f}".format(S))
 
 def main():
     init_epoch = 0
@@ -162,15 +179,13 @@ def main():
                                       batch=args.batch_size, 
                                       shuffle=True)
         """                              
-        val_genA = TestGenerator(genA,
-                                 pathA=None, 
+        val_genA = TestGenerator(pathA=None, 
                                  pathB=pathB, 
                                  A="jazz", 
                                  B="classic", 
                                  batch=args.batch_size, 
                                  shuffle=False)
-        val_genB = TestGenerator(genB,
-                                 pathA=pathA, 
+        val_genB = TestGenerator(pathA=pathA, 
                                  pathB=None, 
                                  A="jazz", 
                                  B="classic", 
@@ -185,7 +200,7 @@ def main():
     aud_pool = AudioPool()    
     for i in range(args.epoch):
          if args.load_classifier:
-            test(classifier, val_genA, val_genB)#, val_gen)
+            test(classifier, genA, genB, val_genA, val_genB)
          train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
  
     

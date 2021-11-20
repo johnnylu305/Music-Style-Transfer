@@ -33,7 +33,6 @@ class LRSchedule(optimizers.schedules.LearningRateSchedule):
         self.lr = lr
         self.decay_step = decay_epoch*batch
         self.total_step = total_epoch*batch
-        self.batch = batch
 
     def __call__(self, step):
         if step<self.decay_step:

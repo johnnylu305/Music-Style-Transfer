@@ -87,13 +87,12 @@ class ClassifierGenerator(Sequence):
 
 class TestGenerator(Sequence):
 
-    def __init__(self, gen, pathA, pathB, A, B, batch, shuffle=False):
+    def __init__(self, pathA, pathB, A, B, batch, shuffle=False):
         self.batch = batch
         self.shuffle = shuffle
         self.paths, self.idxs = self.load_ids(pathA, pathB)
         # we will generated A/B from B/A
-        self.nameToCat = {B:0, A:1}
-        self.gen = gen
+        self.nameToCat = {A:0, B:1}
 
     def __len__(self):
         # number of iteration for one epoch
@@ -105,7 +104,7 @@ class TestGenerator(Sequence):
         # get indexs for this batch
         idxs = self.idxs[idx*self.batch:(idx+1)*self.batch]
         self.xs, self.ys = self.__data_generation(idxs)
-        return self.gen(self.xs), self.ys
+        return self.xs, self.ys
 
     def load_ids(self, pathA, pathB):
         # get paths of files
