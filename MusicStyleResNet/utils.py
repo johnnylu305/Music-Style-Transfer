@@ -1,8 +1,9 @@
 import numpy as np
 import pretty_midi
+from tensorflow.keras import optimizers
 
 # ImagePool/AudioPool has been utilized for many GAN-based methods
-# It will record the generated images (fake images) for discriminator
+# It will record the generated images/audio (fake images/audio) for discriminator
 # Hence, the discriminator will not forget it
 class AudioPool:
     def __init__(self, size=50):
@@ -24,6 +25,22 @@ class AudioPool:
             return his_audioA, his_audioB
         else:
             return audioA, audioB
+
+
+class LRSchedule(optimizers.schedules.LearningRateSchedule):
+    
+    def __init__(self, lr, decay_step, total_epoch, batch):
+        self.lr = lr
+        self.decay_step = decay_step
+        self.total_epoch = total_epoch
+        self.batch = batch
+
+    def __call__(self, step):
+        if step//batch<self.decay_step:
+            return self.lr
+        else:
+            return self.lr*(self.total_epoch-step//batch)/(self.total_epoch-self.decay_step)
+
 
 class MIDICreator:
     def __init__(self, tempo=120., beat_resolution=16, pitches=128, velocity=100):

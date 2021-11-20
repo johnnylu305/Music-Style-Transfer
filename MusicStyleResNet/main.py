@@ -6,7 +6,7 @@ import numpy as np
 from tensorflow.keras import Input
 from model import Generator, Discriminator, Classifier
 from preprocess import TrainGenerator, TestGenerator, ClassifierGenerator
-from utils import AudioPool, MIDICreator
+from utils import AudioPool, MIDICreator, LRSchedule
 
 
 parser = argparse.ArgumentParser(description='Music Style Transfer')
@@ -22,8 +22,10 @@ parser.add_argument('--load_checkpoint', dest='load_checkpoint', default=None, h
 parser.add_argument('--load_classifier', dest='load_classifier', default=None, help='load checkpoint for classifier')
 args = parser.parse_args()
 
-GOPT = tf.keras.optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
-DOPT = tf.keras.optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
+GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, args.batch_size), 
+                                beta_1=args.beta1)
+DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, args.batch_size), 
+                                beta_1=args.beta1)
 
 
 def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool):
