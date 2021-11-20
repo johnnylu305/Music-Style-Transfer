@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
-from tensorflow.keras import Model, Sequential, Input, layers, initializers, activations, optimizers
+from tensorflow.keras import Model, Sequential, Input, layers, initializers, activations, optimizers, losses
 from module import Encoder, ResBlock, Decoder
 
 

@@ -28,7 +28,7 @@ DOPT = tf.keras.optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
 
 def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool):
     # the length is the smallest one
-    for (realA, _), (realB, _), (realABC, _) in zip(dataA, dataB, dataABC): 
+    for i, ((realA, _), (realB, _), (realABC, _)) in enumerate(zip(dataA, dataB, dataABC)): 
         # two tape
         # since we would like to update generator and discriminator respectively
         with tf.GradientTape(persistent=True) as gen_tape, tf.GradientTape(persistent=True) as dis_tape: 
@@ -66,7 +66,8 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
 
             dis_loss = disA.loss_fn(dis_realA, dis_his_fakeA)+disB.loss_fn(dis_realB, dis_his_fakeB)
             dis_loss += disAm.loss_fn(dis_realAm, dis_his_fakeAm)+disBm.loss_fn(dis_realBm, dis_his_fakeB) 
-            print("Gen:{}, Dis:{}".format(gen_loss.numpy(), dis_loss.numpy()))
+            if i%100==0:
+                print("Gen:{}, Dis:{}".format(gen_loss.numpy(), dis_loss.numpy()))
         # gradient
         gen_var = genA.trainable_variables+genB.trainable_variables
         dis_var = disA.trainable_variables+disB.trainable_variables
@@ -179,9 +180,10 @@ def main():
 
     aud_pool = AudioPool()    
     for i in range(args.epoch):
-         train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
          if args.load_classifier:
-            test(classifier, val_genA, val_genB)
+            test(classifier, val_genA, val_genB, val_gen)
+         train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
+ 
     
     # test
     # midicreator = MIDICreator
