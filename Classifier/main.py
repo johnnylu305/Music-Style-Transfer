@@ -5,7 +5,7 @@ import datetime
 import numpy as np
 from tensorflow.keras import callbacks, optimizers, Input
 from model import Classifier
-from preprocess import TrainGenerator
+from preprocess import ClassifierTrainGenerator
 
 
 parser = argparse.ArgumentParser(description='Classifier as a metric')
@@ -35,12 +35,12 @@ def train(model, train_generator, val_generator, checkpoint_path, logs_path, ini
         callbacks.TensorBoard(log_dir=logs_path, 
                               update_freq='batch', 
                               profile_batch=0),
-        callbacks.ModelCheckpoint(filepath=checkpoint_path+"/{epoch:02d}-{val_accuracy:.2f}.hdf5",
+        callbacks.ModelCheckpoint(filepath=checkpoint_path+"/{epoch:02d}-{val_accuracy:.3f}.hdf5",
                                   save_weights_only=True,
                                   monitor='val_accuracy',
                                   mode='max',
                                   save_best_only=True,
-                                  period=10),
+                                  period=1),
         callbacks.LearningRateScheduler(scheduler)
         ]
 
@@ -92,11 +92,21 @@ def main():
     # create data loader
     pathA = '../dataset/preprocess/JC_J/train/'
     pathB = '../dataset/preprocess/JC_C/train/'
-    train_gen = TrainGenerator(pathA=pathA, pathB=pathB, A="jazz", B="classic", batch=args.batch_size, shuffle=True)
+    train_gen = ClassifierTrainGenerator(pathA=pathA, 
+                                         pathB=pathB, 
+                                         A="jazz", 
+                                         B="classic", 
+                                         batch=args.batch_size, 
+                                         shuffle=True)
 
     pathA = '../dataset/preprocess/JC_J/test/'
     pathB = '../dataset/preprocess/JC_C/test/'
-    val_gen = TrainGenerator(pathA=pathA, pathB=pathB, A="jazz", B="classic", batch=args.batch_size, shuffle=True)
+    val_gen = ClassifierTrainGenerator(pathA=pathA, 
+                                       pathB=pathB, 
+                                       A="jazz", 
+                                       B="classic", 
+                                       batch=args.batch_size, 
+                                       shuffle=True)
 
     # compile model graph
     model.compile(

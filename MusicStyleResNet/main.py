@@ -18,6 +18,7 @@ parser.add_argument('--beta1', dest='beta1', type=float, default=0.5, help='mome
 parser.add_argument('--batch_size', dest='batch_size', type=int, default=16, help='# of video for a batch')
 parser.add_argument('--epoch', dest='epoch', type=int, default=100, help='# epoch')
 parser.add_argument('--load_checkpoint', dest='load_checkpoint', default=None, help='load checkpoint')
+parser.add_argument('--load_classifier', dest='load_classifier', default=None, help='load checkpoint for classifier')
 args = parser.parse_args()
 
 GOPT = tf.keras.optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
@@ -79,6 +80,23 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
         DOPT.apply_gradients(zip(gradients, dis_var))
 
 
+def test(classifier, test_genA, test_genB, test_generator=None):
+    if test_generator:
+        # test on dataset with labels
+        classifier.evaluate_generator(
+            generator=test_generator,
+            verbose=1,
+        )
+    classifier.evaluate_generator(
+        generator=test_genA,
+        verbose=1,
+    )
+    classifier.evaluate_generator(
+        generator=test_genB,
+        verbose=1,
+    )
+
+
 def main():
     init_epoch = 0
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')
@@ -126,10 +144,39 @@ def main():
     disAm = Discriminator(args, "DiscriminatorAm")
     disBm = Discriminator(args, "DiscriminatorBm")
 
+    if args.load_classifier:
+        classifier.load_weights(args.load_checkpoint)
+        pathA = '../dataset/preprocess/JC_J/test/'
+        pathB = '../dataset/preprocess/JC_C/test/'
+        val_gen = ClassifierTrainGenerator(pathA=pathA, 
+                                           pathB=pathB, 
+                                           A="jazz", 
+                                           B="classic", 
+                                           batch=args.batch_size, 
+                                           shuffle=True)
+        val_genA = TestGenerator(pathA=None, 
+                                 pathB=pathB, 
+                                 A="jazz", 
+                                 B="classic", 
+                                 batch=args.batch_size, 
+                                 shuffle=False)
+        val_genB = TestGenerator(pathA=pathA, 
+                                 pathB=None, 
+                                 A="jazz", 
+                                 B="classic", 
+                                 batch=args.batch_size, 
+                                 shuffle=False)
+
+        # compile model graph
+        classifier.compile(
+            loss=classifier.loss_fn,
+            metrics=["accuracy"])
+
     aud_pool = AudioPool()    
     for i in range(args.epoch):
          train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
-
+         if args.load_classifier:
+            test(classifier, val_genA, val_genB)
     
     # test
     # midicreator = MIDICreator

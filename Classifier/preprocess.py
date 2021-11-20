@@ -3,7 +3,7 @@ import numpy as np
 import glob
 import os
 
-class TrainGenerator(Sequence):
+class ClassifierTrainGenerator(Sequence):
 
     def __init__(self, pathA, pathB, A, B, batch, shuffle=False):
         self.batch = batch
@@ -39,7 +39,7 @@ class TrainGenerator(Sequence):
         ys = np.zeros(self.batch)
         for i, path in enumerate(np.array(self.paths)[idxs]):
             music = np.load(path).astype(np.float32)
-            xs[i,:,:] = music
+            xs[i,:,:,:] = music
             ys[i] = self.nameToCat[os.path.split(path)[-1].split("_")[0]]
         return xs, ys
 
