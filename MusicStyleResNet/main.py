@@ -93,13 +93,12 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool,
                                   sources=dis_var)
         DOPT.apply_gradients(zip(gradients, dis_var))
 
-        if writer:
-            with writer.as_default():
-                tf.summary.scalar('Generator Loss', np.mean(gen_losses), step=epoch)
-                tf.summary.scalar('Discriminator Loss', np.mean(dis_losses), step=epoch)
+        with writer.as_default():
+            tf.summary.scalar('Generator Loss', np.mean(gen_losses), step=epoch)
+            tf.summary.scalar('Discriminator Loss', np.mean(dis_losses), step=epoch)
 
 
-def test(classifier, genA, genB, test_genA, test_genB, epoch, writer=None):
+def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, checkpoint_path):
     acc_A = tf.keras.metrics.Accuracy()
     acc_AB = tf.keras.metrics.Accuracy()
     acc_ABA = tf.keras.metrics.Accuracy()
@@ -133,19 +132,19 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer=None):
     print("S: {:.3f}".format(S))
     
     # save weights
-    saver.save('my-model', global_step=epoch)
+    saver.save(os.path.join(checkpoint_path, '{:03d}-{:.3f}').format(epoch, S))
     
     # tensorbaord    
     with writer.as_default():
         tf.summary.scalar('acc_A', acc_A, step=epoch)
         tf.summary.scalar('acc_AB', acc_AB, step=epoch)
         tf.summary.scalar('acc_ABA', acc_ABA, step=epoch)
-        tf.summary.scalar('acc_SA', acc_SA, step=epoch)
+        tf.summary.scalar('SA', SA, step=epoch)
         tf.summary.scalar('acc_B', acc_B, step=epoch)
         tf.summary.scalar('acc_BA', acc_BA, step=epoch)
         tf.summary.scalar('acc_BAB', acc_BAB, step=epoch)
-        tf.summary.scalar('acc_SB', acc_SB, step=epoch)
-        tf.summary.scalar('acc_S', acc_S, step=epoch)
+        tf.summary.scalar('SB', SB, step=epoch)
+        tf.summary.scalar('S', S, step=epoch)
 
 
 def main():
@@ -234,7 +233,7 @@ def main():
     aud_pool = AudioPool()    
     for i in range(args.epoch):
          if args.load_classifier:
-            test(classifier, genA, genB, val_genA, val_genB, i, writer)
+            test(classifier, genA, genB, val_genA, val_genB, i, writer, saver, checkpoint_path)
          train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, i, writer)
  
     
