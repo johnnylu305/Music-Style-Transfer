@@ -3,8 +3,9 @@ import os
 import argparse
 import datetime
 import numpy as np
-from model import Generator, Discriminator
-from preprocess import TrainGenerator
+from tensorflow.keras import Input
+from model import Generator, Discriminator, Classifier
+from preprocess import TrainGenerator, TestGenerator, ClassifierGenerator
 from utils import AudioPool, MIDICreator
 
 
@@ -145,22 +146,26 @@ def main():
     disBm = Discriminator(args, "DiscriminatorBm")
 
     if args.load_classifier:
-        classifier.load_weights(args.load_checkpoint)
+        classifier = Classifier(None, "Classifier")
+        classifier(Input(shape=(64, 84, 1)))
+        classifier.load_weights(args.load_classifier)
         pathA = '../dataset/preprocess/JC_J/test/'
         pathB = '../dataset/preprocess/JC_C/test/'
-        val_gen = ClassifierTrainGenerator(pathA=pathA, 
-                                           pathB=pathB, 
-                                           A="jazz", 
-                                           B="classic", 
-                                           batch=args.batch_size, 
-                                           shuffle=True)
-        val_genA = TestGenerator(pathA=None, 
+        val_gen = ClassifierGenerator(pathA=pathA, 
+                                      pathB=pathB, 
+                                      A="jazz", 
+                                      B="classic", 
+                                      batch=args.batch_size, 
+                                      shuffle=True)
+        val_genA = TestGenerator(genA,
+                                 pathA=None, 
                                  pathB=pathB, 
                                  A="jazz", 
                                  B="classic", 
                                  batch=args.batch_size, 
                                  shuffle=False)
-        val_genB = TestGenerator(pathA=pathA, 
+        val_genB = TestGenerator(genB,
+                                 pathA=pathA, 
                                  pathB=None, 
                                  A="jazz", 
                                  B="classic", 
