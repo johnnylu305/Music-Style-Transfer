@@ -85,16 +85,16 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
         DOPT.apply_gradients(zip(gradients, dis_var))
 
 
-def test(classifier, genA, genB, test_genA, test_genB, test_generator=None):
+def test(classifier, genA, genB, test_genA, test_genB):
     acc_A = tf.keras.metrics.Accuracy()
     acc_AB = tf.keras.metrics.Accuracy()
     acc_ABA = tf.keras.metrics.Accuracy()
-    for xs, ys in test_genA: 
-        acc_A.update_state(classifier(xs), ys)
+    for xs, ys in test_genA:
+        acc_A.update_state(classifier(xs)>0.5, ys)
         AB = genB(xs)
-        acc_AB.update_state(classifier(AB), ys)
+        acc_AB.update_state(classifier(AB)>0.5, ys)
         ABA = genA(AB)
-        acc_ABA.update_state(classifier(ABA), ys)
+        acc_ABA.update_state(classifier(ABA)>0.5, ys)
     acc_A = acc_A.result().numpy()
     acc_AB = acc_AB.result().numpy()
     acc_ABA = acc_ABA.result().numpy()
@@ -105,11 +105,11 @@ def test(classifier, genA, genB, test_genA, test_genB, test_generator=None):
     acc_BA = tf.keras.metrics.Accuracy()
     acc_BAB = tf.keras.metrics.Accuracy()
     for xs, ys in test_genB: 
-        acc_B.update_state(classifier(xs), ys)
+        acc_B.update_state(classifier(xs)>0.5, ys)
         BA = genA(xs)
-        acc_BA.update_state(classifier(BA), ys)
+        acc_BA.update_state(classifier(BA)>0.5, ys)
         BAB = genB(BA)
-        acc_BAB.update_state(classifier(BAB), ys)
+        acc_BAB.update_state(classifier(BAB)>0.5, ys)
     acc_B = acc_B.result().numpy()
     acc_BA = acc_BA.result().numpy()
     acc_BAB = acc_BAB.result().numpy()
@@ -117,6 +117,7 @@ def test(classifier, genA, genB, test_genA, test_genB, test_generator=None):
     print("B: {:.3f}, BA: {:.3f}, BAB: {:.3f}, SB: {:.3f}".format(acc_B, acc_BA, acc_BAB, SB))
     S = (SA+SB)/2
     print("S: {:.3f}".format(S))
+
 
 def main():
     init_epoch = 0
@@ -170,23 +171,15 @@ def main():
         classifier(Input(shape=(64, 84, 1)))
         classifier.load_weights(args.load_classifier)
         pathA = '../dataset/preprocess/JC_J/test/'
-        pathB = '../dataset/preprocess/JC_C/test/'
-        """
-        val_gen = ClassifierGenerator(pathA=pathA, 
-                                      pathB=pathB, 
-                                      A="jazz", 
-                                      B="classic", 
-                                      batch=args.batch_size, 
-                                      shuffle=True)
-        """                              
-        val_genA = TestGenerator(pathA=None, 
-                                 pathB=pathB, 
+        pathB = '../dataset/preprocess/JC_C/test/'            
+        val_genA = TestGenerator(pathA=pathA, 
+                                 pathB=None, 
                                  A="jazz", 
                                  B="classic", 
                                  batch=args.batch_size, 
                                  shuffle=False)
-        val_genB = TestGenerator(pathA=pathA, 
-                                 pathB=None, 
+        val_genB = TestGenerator(pathA=None, 
+                                 pathB=pathB, 
                                  A="jazz", 
                                  B="classic", 
                                  batch=args.batch_size, 

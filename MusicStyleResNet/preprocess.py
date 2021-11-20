@@ -91,7 +91,6 @@ class TestGenerator(Sequence):
         self.batch = batch
         self.shuffle = shuffle
         self.paths, self.idxs = self.load_ids(pathA, pathB)
-        # we will generated A/B from B/A
         self.nameToCat = {A:0, B:1}
 
     def __len__(self):
