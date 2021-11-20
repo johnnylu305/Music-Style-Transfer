@@ -29,17 +29,17 @@ class AudioPool:
 
 class LRSchedule(optimizers.schedules.LearningRateSchedule):
     
-    def __init__(self, lr, decay_step, total_epoch, batch):
+    def __init__(self, lr, decay_epoch, total_epoch, batch):
         self.lr = lr
-        self.decay_step = decay_step
-        self.total_epoch = total_epoch
+        self.decay_step = decay_epoch*batch
+        self.total_step = total_epoch*batch
         self.batch = batch
 
     def __call__(self, step):
-        if step//batch<self.decay_step:
+        if step<self.decay_step:
             return self.lr
         else:
-            return self.lr*(self.total_epoch-step//batch)/(self.total_epoch-self.decay_step)
+            return self.lr*(self.total_step-step)/(self.total_step-self.decay_step)
 
 
 class MIDICreator:
