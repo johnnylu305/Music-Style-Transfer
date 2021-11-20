@@ -152,12 +152,14 @@ def main():
         classifier.load_weights(args.load_classifier)
         pathA = '../dataset/preprocess/JC_J/test/'
         pathB = '../dataset/preprocess/JC_C/test/'
+        """
         val_gen = ClassifierGenerator(pathA=pathA, 
                                       pathB=pathB, 
                                       A="jazz", 
                                       B="classic", 
                                       batch=args.batch_size, 
                                       shuffle=True)
+        """                              
         val_genA = TestGenerator(genA,
                                  pathA=None, 
                                  pathB=pathB, 
@@ -181,7 +183,7 @@ def main():
     aud_pool = AudioPool()    
     for i in range(args.epoch):
          if args.load_classifier:
-            test(classifier, val_genA, val_genB, val_gen)
+            test(classifier, val_genA, val_genB)#, val_gen)
          train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
  
     
