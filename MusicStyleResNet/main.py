@@ -130,21 +130,22 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
     
     # save weights
     global MAX_S
-    if S>MAX_S:
+    if saver and S>MAX_S:
         MAX_S = S
         saver.save(os.path.join(checkpoint_path, '{:03d}-{:.3f}').format(epoch, S))
     
-    # tensorbaord    
-    with writer.as_default():
-        tf.summary.scalar('acc_A', acc_A, step=epoch)
-        tf.summary.scalar('acc_AB', acc_AB, step=epoch)
-        tf.summary.scalar('acc_ABA', acc_ABA, step=epoch)
-        tf.summary.scalar('SA', SA, step=epoch)
-        tf.summary.scalar('acc_B', acc_B, step=epoch)
-        tf.summary.scalar('acc_BA', acc_BA, step=epoch)
-        tf.summary.scalar('acc_BAB', acc_BAB, step=epoch)
-        tf.summary.scalar('SB', SB, step=epoch)
-        tf.summary.scalar('S', S, step=epoch)
+    # tensorbaord
+    if writer:
+        with writer.as_default():
+            tf.summary.scalar('acc_A', acc_A, step=epoch)
+            tf.summary.scalar('acc_AB', acc_AB, step=epoch)
+            tf.summary.scalar('acc_ABA', acc_ABA, step=epoch)
+            tf.summary.scalar('SA', SA, step=epoch)
+            tf.summary.scalar('acc_B', acc_B, step=epoch)
+            tf.summary.scalar('acc_BA', acc_BA, step=epoch)
+            tf.summary.scalar('acc_BAB', acc_BAB, step=epoch)
+            tf.summary.scalar('SB', SB, step=epoch)
+            tf.summary.scalar('S', S, step=epoch)
 
 
 def main():
@@ -194,8 +195,6 @@ def main():
     # load checkpoints
     if args.load_checkpoint:
         global MAX_S
-        print(checkpoint_path)
-        print(os.path.split(args.load_checkpoint))
         assert os.path.samefile(os.path.split(args.load_checkpoint)[0], checkpoint_path)
         if saver.restore(args.load_checkpoint): #.expect_partial():
             # reset epoch
@@ -233,11 +232,13 @@ def main():
             metrics=["accuracy"])
 
     aud_pool = AudioPool()    
-    for i in range(args.epoch):
-        train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, i, writer)
-        if args.load_classifier:
-            test(classifier, genA, genB, val_genA, val_genB, i, writer, saver, checkpoint_path)
-    
+    if args.phase=='train':
+        for i in range(args.epoch):
+            train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, i, writer)
+            if args.load_classifier:
+                test(classifier, genA, genB, val_genA, val_genB, i, writer, saver, checkpoint_path)
+    else:
+        test(classifier, genA, genB, val_genA, val_genB, None, None, None, checkpoint_path)
     # test
     # midicreator = MIDICreator
     # test = "../dataset/preprocess/CP_C/train/classic_piano_test_1.npy"
