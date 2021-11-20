@@ -5,7 +5,7 @@ import datetime
 import numpy as np
 from model import Generator, Discriminator
 from preprocess import TrainGenerator
-from utils import AudioPool
+from utils import AudioPool, MIDICreator
 
 
 parser = argparse.ArgumentParser(description='Music Style Transfer')
@@ -128,8 +128,17 @@ def main():
 
     aud_pool = AudioPool()    
     for i in range(args.epoch):
-        train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
+         train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
 
+    
+    # test
+    # midicreator = MIDICreator
+    # test = "../dataset/preprocess/CP_C/train/classic_piano_test_1.npy"
+    # music = tf.expand_dims(np.load(test).astype(np.float32), axis=0)
+
+    # output = genA(music)
+
+    # midicreator.create_midi_from_piano_rolls(output, "test_output")
 
 if __name__=="__main__":
     main()

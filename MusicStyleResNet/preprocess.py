@@ -45,14 +45,14 @@ class TrainGenerator(Sequence):
 
 
 if __name__=="__main__":
-    CP_C = TrainGenerator(path='./dataset/preprocess/CP_C/train/', batch=5, shuffle=True)
-    CP_P = TrainGenerator(path='./dataset/preprocess/CP_P/train/', batch=5, shuffle=True)
+    CP_C = TrainGenerator(path='../dataset/preprocess/CP_C/train/', batch=5, shuffle=True)
+    CP_P = TrainGenerator(path='../dataset/preprocess/CP_P/train/', batch=5, shuffle=True)
     for (axs, ays), (bxs, bys) in zip(CP_C, CP_P):
         print(axs.shape)
         print(bxs.shape)
         print(ays)
         print(bys)
-    JCP_MIX = TrainGenerator(path='./dataset/preprocess/JCP_mixed/', batch=5, shuffle=True)
+    JCP_MIX = TrainGenerator(path='../dataset/preprocess/JCP_mixed/', batch=5, shuffle=True)
     for xs, ys in JCP_MIX:
         print(xs.shape)
         print(ys)
