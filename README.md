@@ -30,6 +30,20 @@ cd ./MusicStyleResNet
 ```
 python main.py --load_classifier ../Classifier/checkpoints/Classifier/{timestamp}/{checkpoint}.hdf5
 ```
+## Continue Training
+```
+cd ./MusicStyleResNet
+```
+```
+python main.py --load_checkpoint ./checkpoints/ResNet/{timestamp}/{000-0.250-1}
+```
+## Test
+```
+cd ./MusicStyleResNet
+```
+```
+python main.py --load_classifier ../Classifier/checkpoints/Classifier/{timestamp}/{checkpoint}.hdf5 --load_checkpoint ./checkpoints/ResNet/{timestamp}/{000-0.250-1} --phase test
+```
 
 # Train Genre Classifier 
 ```
