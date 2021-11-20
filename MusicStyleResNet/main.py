@@ -72,10 +72,6 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool,
 
             dis_loss = disA.loss_fn(dis_realA, dis_his_fakeA)+disB.loss_fn(dis_realB, dis_his_fakeB)
             dis_loss += disAm.loss_fn(dis_realAm, dis_his_fakeAm)+disBm.loss_fn(dis_realBm, dis_his_fakeB)
-            if writer:
-                with writer.as_default():
-                    tf.summary.scalar('Generator Loss', gen_loss, step=epoch)
-                    tf.summary.scalar('Discriminator Loss', dis_loss, step=epoch)
             gen_losses.append(gen_loss)
             dis_losses.append(dis_loss)
             if i%400==0:
@@ -93,9 +89,10 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool,
                                   sources=dis_var)
         DOPT.apply_gradients(zip(gradients, dis_var))
 
-        with writer.as_default():
-            tf.summary.scalar('Generator Loss', np.mean(gen_losses), step=epoch)
-            tf.summary.scalar('Discriminator Loss', np.mean(dis_losses), step=epoch)
+    with writer.as_default():
+        print(np.mean(gen_losses), epoch)
+        tf.summary.scalar('Generator Loss', np.mean(gen_losses), step=epoch)
+        tf.summary.scalar('Discriminator Loss', np.mean(dis_losses), step=epoch)
 
 
 def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, checkpoint_path):
@@ -132,7 +129,7 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
     print("S: {:.3f}".format(S))
     
     # save weights
-    saver.save(os.path.join(checkpoint_path, '{:03d}-{:.3f}').format(epoch, S))
+    saver.save(os.path.join(checkpoint_path, '{:03d}-{:.3f}.hdf5').format(epoch, S))
     
     # tensorbaord    
     with writer.as_default():
@@ -232,10 +229,9 @@ def main():
 
     aud_pool = AudioPool()    
     for i in range(args.epoch):
-         if args.load_classifier:
+        train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, i, writer)
+        if args.load_classifier:
             test(classifier, genA, genB, val_genA, val_genB, i, writer, saver, checkpoint_path)
-         train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, i, writer)
- 
     
     # test
     # midicreator = MIDICreator
@@ -245,6 +241,7 @@ def main():
     # output = genA(music)
 
     # midicreator.create_midi_from_piano_rolls(output, "test_output")
+
 
 if __name__=="__main__":
     main()
