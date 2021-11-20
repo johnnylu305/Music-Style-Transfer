@@ -20,6 +20,7 @@ parser.add_argument('--batch_size', dest='batch_size', type=int, default=16, hel
 parser.add_argument('--epoch', dest='epoch', type=int, default=100, help='# epoch')
 parser.add_argument('--load_checkpoint', dest='load_checkpoint', default=None, help='load checkpoint')
 parser.add_argument('--load_classifier', dest='load_classifier', default=None, help='load checkpoint for classifier')
+parser.add_argument('--generate_midi', dest='generate_midi', default=0, help='number of epochs between generating midi files (0 means none are generated)')
 args = parser.parse_args()
 
 iteration = 11216//args.batch_size
@@ -85,7 +86,7 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
         DOPT.apply_gradients(zip(gradients, dis_var))
 
 
-def test(classifier, genA, genB, test_genA, test_genB):
+def test(classifier, genA, genB, test_genA, test_genB, midi_path, epoch_number):
     acc_A = tf.keras.metrics.Accuracy()
     acc_AB = tf.keras.metrics.Accuracy()
     acc_ABA = tf.keras.metrics.Accuracy()
@@ -118,6 +119,25 @@ def test(classifier, genA, genB, test_genA, test_genB):
     S = (SA+SB)/2
     print("S: {:.3f}".format(S))
 
+    # generate midi files
+    # only the first sample from each dataset is tested
+    if(int(args.generate_midi) > 0 and epoch_number%int(args.generate_midi) == 0):
+        midicreator = MIDICreator()
+
+        # generate B from A
+        A_songs, _ = test_genA[0]
+        A_song = A_songs[0:1]
+        AB_1 = genB(A_song)
+        ABfilename = "AB" + str(epoch_number)
+        print(ABfilename)
+        midicreator.create_midi_from_piano_rolls(AB_1, os.path.join(midi_path, ABfilename))
+
+        # generate A from B
+        B_songs, _ = test_genB[0]
+        BA_1 = genA(B_songs[0:1])
+        BAfilename = "BA" + str(epoch_number)
+        midicreator.create_midi_from_piano_rolls(BA_1, os.path.join(midi_path, BAfilename))        
+
 
 def main():
     init_epoch = 0
@@ -127,14 +147,20 @@ def main():
     if args.load_checkpoint and os.path.exists(args.load_checkpoint):
         timestamp = args.load_checkpoint.split(os.sep)[-2]
     
+
     save_dir = "./checkpoints/"
     log_dir = "./logs/"
+    midi_path = "./midi/"
+
     checkpoint_path = os.path.join(save_dir, args.type, timestamp)
     logs_path = os.path.join(log_dir, args.type, timestamp)
+    midi_path = os.path.join(midi_path, args.type, timestamp)
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
     if not os.path.exists(logs_path):
         os.makedirs(logs_path) 
+    if not os.path.exists(midi_path):
+        os.makedirs(midi_path) 
 
     # load checkpoints
     if args.load_checkpoint:
@@ -192,19 +218,10 @@ def main():
 
     aud_pool = AudioPool()    
     for i in range(args.epoch):
-         if args.load_classifier:
-            test(classifier, genA, genB, val_genA, val_genB)
-         train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
- 
-    
-    # test
-    # midicreator = MIDICreator
-    # test = "../dataset/preprocess/CP_C/train/classic_piano_test_1.npy"
-    # music = tf.expand_dims(np.load(test).astype(np.float32), axis=0)
-
-    # output = genA(music)
-
-    # midicreator.create_midi_from_piano_rolls(output, "test_output")
+        if args.load_classifier:
+            test(classifier, genA, genB, val_genA, val_genB, midi_path, i)
+        train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
+        
 
 if __name__=="__main__":
     main()

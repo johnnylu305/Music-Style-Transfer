@@ -2,6 +2,7 @@ dataset/*
 MusicStyleResNet/__pycache__
 MusicStyleResNet/checkpoints
 MusicStyleResNet/logs
+MusicStyleResNet/midi
 Classifier/__pycache__
 Classifier/checkpoints
 Classifier/logs

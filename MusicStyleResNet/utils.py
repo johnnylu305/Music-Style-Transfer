@@ -95,7 +95,7 @@ class MIDICreator:
 
             for p in range(len(notes_now)):
                 pitch = p + padding
-                pitch_on = notes_now[p]
+                pitch_on = notes_now[p] > 0.5 # count a note as on if it is more than 0.5 on
 
                 # if pitch has changed status
                 if(pitch_on != note_on[pitch]):
