@@ -23,10 +23,11 @@ parser.add_argument('--load_checkpoint', dest='load_checkpoint', default=None, h
 parser.add_argument('--load_classifier', dest='load_classifier', default=None, help='load checkpoint for classifier')
 args = parser.parse_args()
 
-iteration = 11216//args.batch_size
-GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, iteration), 
+MAX_S = 0
+ITER = 11216//args.batch_size
+GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER), 
                                 beta_1=args.beta1)
-DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, iteration), 
+DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER), 
                                 beta_1=args.beta1)
 
 
@@ -90,7 +91,6 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool,
         DOPT.apply_gradients(zip(gradients, dis_var))
 
     with writer.as_default():
-        print(np.mean(gen_losses), epoch)
         tf.summary.scalar('Generator Loss', np.mean(gen_losses), step=epoch)
         tf.summary.scalar('Discriminator Loss', np.mean(dis_losses), step=epoch)
 
@@ -129,7 +129,10 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
     print("S: {:.3f}".format(S))
     
     # save weights
-    saver.save(os.path.join(checkpoint_path, '{:03d}-{:.3f}.hdf5').format(epoch, S))
+    global MAX_S
+    if S>MAX_S:
+        MAX_S = S
+        saver.save(os.path.join(checkpoint_path, '{:03d}-{:.3f}').format(epoch, S))
     
     # tensorbaord    
     with writer.as_default():
@@ -149,7 +152,7 @@ def main():
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')
 
     # reuse the directory if loading checkpoint
-    if args.load_checkpoint and os.path.exists(args.load_checkpoint):
+    if args.load_checkpoint and os.path.exists(os.path.split(args.load_checkpoint)[0]):
         timestamp = args.load_checkpoint.split(os.sep)[-2]
     
     save_dir = "./checkpoints/"
@@ -190,12 +193,14 @@ def main():
     saver = get_saver(GOPT, DOPT, genA, genB, disA, disB, disAm, disBm, checkpoint_path)
     # load checkpoints
     if args.load_checkpoint:
-        assert os.path.split(args.load_checkpoint)[0]==checkpoint_path
+        global MAX_S
+        print(checkpoint_path)
+        print(os.path.split(args.load_checkpoint))
+        assert os.path.samefile(os.path.split(args.load_checkpoint)[0], checkpoint_path)
         if saver.restore(args.load_checkpoint): #.expect_partial():
             # reset epoch
-            init_epoch = int(checkpoint.split("-")[-1])+1
-            print(init_epoch)
-            exit()
+            init_epoch = int(os.path.split(args.load_checkpoint)[-1].split("-")[0])+1
+            MAX_S = float(os.path.split(args.load_checkpoint)[-1].split("-")[1])
             print("Load checkpoint succeeded")
         #init_epoch = int(os.path.split(args.load_checkpoint)[-1].split("-")[0])
 
