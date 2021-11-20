@@ -1,5 +1,6 @@
 import numpy as np
 import pretty_midi
+import tensorflow as tf
 from tensorflow.keras import optimizers
 
 # ImagePool/AudioPool has been utilized for many GAN-based methods
@@ -113,6 +114,25 @@ class MIDICreator:
 
         return midi
 
+
+def get_saver(GOPT, DOPT, genA, genB, disA, disB, disAm, disBm, checkpoint_dir):
+    print("Checkpoint path: ", checkpoint_dir)
+    saver = tf.train.Checkpoint(G_optimizer=GOPT, 
+                                D_optimizer=DOPT, 
+                                genA=genA,
+                                genB=genB,
+                                disA=disA,
+                                disB=disB,
+                                disAm=disAm,
+                                disBm=disBm)
+    return saver
+
+
+def get_writer(log_dir):
+    summary_writer = tf.summary.create_file_writer(log_dir)
+    return summary_writer
+
+
 def main():
     test_1 = "../dataset/preprocess/CP_C/train/classic_piano_train_1.npy"
     test_2 = "../dataset/preprocess/CP_C/train/classic_piano_train_2.npy"
@@ -123,6 +143,7 @@ def main():
     midi_creator = MIDICreator()
 
     midi_creator.create_midi_from_piano_rolls([part1, part2], "classic_piano_train_1")
+
 
 if __name__=="__main__":
     main()

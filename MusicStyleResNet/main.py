@@ -3,10 +3,11 @@ import os
 import argparse
 import datetime
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras import Input
 from model import Generator, Discriminator, Classifier
 from preprocess import TrainGenerator, TestGenerator, ClassifierGenerator
-from utils import AudioPool, MIDICreator, LRSchedule
+from utils import AudioPool, MIDICreator, LRSchedule, get_saver, get_writer 
 
 
 parser = argparse.ArgumentParser(description='Music Style Transfer')
@@ -23,14 +24,17 @@ parser.add_argument('--load_classifier', dest='load_classifier', default=None, h
 parser.add_argument('--generate_midi', dest='generate_midi', default=0, help='number of epochs between generating midi files (0 means none are generated)')
 args = parser.parse_args()
 
-iteration = 11216//args.batch_size
-GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, iteration), 
+MAX_S = 0
+ITER = 11216//args.batch_size
+GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER), 
                                 beta_1=args.beta1)
-DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, iteration), 
+DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER), 
                                 beta_1=args.beta1)
 
 
-def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool):
+def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, epoch, writer):
+    gen_losses = []
+    dis_losses = []
     # the length is the smallest one
     for i, ((realA, _), (realB, _), (realABC, _)) in enumerate(zip(dataA, dataB, dataABC)): 
         # two tape
@@ -69,7 +73,9 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
             gen_loss = genA.loss_fn(dis_fakeA, recB, realB)+genB.loss_fn(dis_fakeB, recA, realA)
 
             dis_loss = disA.loss_fn(dis_realA, dis_his_fakeA)+disB.loss_fn(dis_realB, dis_his_fakeB)
-            dis_loss += disAm.loss_fn(dis_realAm, dis_his_fakeAm)+disBm.loss_fn(dis_realBm, dis_his_fakeB) 
+            dis_loss += disAm.loss_fn(dis_realAm, dis_his_fakeAm)+disBm.loss_fn(dis_realBm, dis_his_fakeB)
+            gen_losses.append(gen_loss)
+            dis_losses.append(dis_loss)
             if i%400==0:
                 print("Gen: {:.3f}, Dis: {:.3f}".format(gen_loss.numpy(), dis_loss.numpy()))
         # gradient
@@ -85,8 +91,12 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
                                   sources=dis_var)
         DOPT.apply_gradients(zip(gradients, dis_var))
 
+    with writer.as_default():
+        tf.summary.scalar('Generator Loss', np.mean(gen_losses), step=epoch)
+        tf.summary.scalar('Discriminator Loss', np.mean(dis_losses), step=epoch)
 
-def test(classifier, genA, genB, test_genA, test_genB, midi_path, epoch_number):
+
+def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, checkpoint_path, midi_path):
     acc_A = tf.keras.metrics.Accuracy()
     acc_AB = tf.keras.metrics.Accuracy()
     acc_ABA = tf.keras.metrics.Accuracy()
@@ -118,33 +128,52 @@ def test(classifier, genA, genB, test_genA, test_genB, midi_path, epoch_number):
     print("B: {:.3f}, BA: {:.3f}, BAB: {:.3f}, SB: {:.3f}".format(acc_B, acc_BA, acc_BAB, SB))
     S = (SA+SB)/2
     print("S: {:.3f}".format(S))
+    
+    # save weights
+    global MAX_S
+    if saver and S>MAX_S:
+        MAX_S = S
+        saver.save(os.path.join(checkpoint_path, '{:03d}-{:.3f}').format(epoch, S))
+    
+    # tensorbaord
+    if writer:
+        with writer.as_default():
+            tf.summary.scalar('acc_A', acc_A, step=epoch)
+            tf.summary.scalar('acc_AB', acc_AB, step=epoch)
+            tf.summary.scalar('acc_ABA', acc_ABA, step=epoch)
+            tf.summary.scalar('SA', SA, step=epoch)
+            tf.summary.scalar('acc_B', acc_B, step=epoch)
+            tf.summary.scalar('acc_BA', acc_BA, step=epoch)
+            tf.summary.scalar('acc_BAB', acc_BAB, step=epoch)
+            tf.summary.scalar('SB', SB, step=epoch)
+            tf.summary.scalar('S', S, step=epoch)
 
     # generate midi files
     # only the first sample from each dataset is tested
-    if(int(args.generate_midi) > 0 and epoch_number%int(args.generate_midi) == 0):
+    if(int(args.generate_midi) > 0 and epoch%int(args.generate_midi) == 0):
         midicreator = MIDICreator()
 
         # generate B from A
         A_songs, _ = test_genA[0]
         A_song = A_songs[0:1]
         AB_1 = genB(A_song)
-        ABfilename = "AB" + str(epoch_number)
+        ABfilename = "AB" + str(epoch)
         print(ABfilename)
         midicreator.create_midi_from_piano_rolls(AB_1, os.path.join(midi_path, ABfilename))
 
         # generate A from B
         B_songs, _ = test_genB[0]
         BA_1 = genA(B_songs[0:1])
-        BAfilename = "BA" + str(epoch_number)
+        BAfilename = "BA" + str(epoch)
         midicreator.create_midi_from_piano_rolls(BA_1, os.path.join(midi_path, BAfilename))        
 
 
 def main():
     init_epoch = 0
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')
-    
+
     # reuse the directory if loading checkpoint
-    if args.load_checkpoint and os.path.exists(args.load_checkpoint):
+    if args.load_checkpoint and os.path.exists(os.path.split(args.load_checkpoint)[0]):
         timestamp = args.load_checkpoint.split(os.sep)[-2]
     
 
@@ -161,12 +190,6 @@ def main():
         os.makedirs(logs_path) 
     if not os.path.exists(midi_path):
         os.makedirs(midi_path) 
-
-    # load checkpoints
-    if args.load_checkpoint:
-        assert os.path.split(args.load_checkpoint)[0]==checkpoint_path
-        model.load_weights(args.load_checkpoint)
-        init_epoch = int(os.path.split(args.load_checkpoint)[-1].split("-")[0])
 
     # create data loader
     dataA = TrainGenerator(path=os.path.join(args.dataset_dir,
@@ -191,6 +214,24 @@ def main():
     disB = Discriminator(args, "DiscriminatorB")
     disAm = Discriminator(args, "DiscriminatorAm")
     disBm = Discriminator(args, "DiscriminatorBm")
+
+
+    # get saver
+    saver = get_saver(GOPT, DOPT, genA, genB, disA, disB, disAm, disBm, checkpoint_path)
+    # load checkpoints
+    if args.load_checkpoint:
+        global MAX_S
+        assert os.path.samefile(os.path.split(args.load_checkpoint)[0], checkpoint_path)
+        if saver.restore(args.load_checkpoint): #.expect_partial():
+            # reset epoch
+            init_epoch = int(os.path.split(args.load_checkpoint)[-1].split("-")[0])+1
+            MAX_S = float(os.path.split(args.load_checkpoint)[-1].split("-")[1])
+            print("Load checkpoint succeeded")
+        #init_epoch = int(os.path.split(args.load_checkpoint)[-1].split("-")[0])
+
+    # get tensorboard writer
+    writer = get_writer(logs_path)
+
 
     if args.load_classifier:
         classifier = Classifier(None, "Classifier")
@@ -217,11 +258,14 @@ def main():
             metrics=["accuracy"])
 
     aud_pool = AudioPool()    
-    for i in range(args.epoch):
-        if args.load_classifier:
-            test(classifier, genA, genB, val_genA, val_genB, midi_path, i)
-        train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool)
-        
+    if args.phase=='train':
+        for i in range(args.epoch):
+            train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, i, writer)
+            if args.load_classifier:
+                test(classifier, genA, genB, val_genA, val_genB, i, writer, saver, checkpoint_path, midi_path)
+    else:
+        test(classifier, genA, genB, val_genA, val_genB, None, None, None, checkpoint_path, midi_path)
+
 
 if __name__=="__main__":
     main()

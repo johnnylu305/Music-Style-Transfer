@@ -5,11 +5,12 @@ import os
 
 class ClassifierTrainGenerator(Sequence):
 
-    def __init__(self, pathA, pathB, A, B, batch, shuffle=False):
+    def __init__(self, pathA, pathB, A, B, batch, shuffle=False, noise=False):
         self.batch = batch
         self.shuffle = shuffle
         self.paths, self.idxs = self.load_ids(pathA, pathB)
         self.nameToCat = {A:0, B:1}
+        self.noise = noise
 
     def __len__(self):
         # number of iteration for one epoch
@@ -21,6 +22,8 @@ class ClassifierTrainGenerator(Sequence):
         # get indexs for this batch
         idxs = self.idxs[idx*self.batch:(idx+1)*self.batch]
         self.xs, self.ys = self.__data_generation(idxs)
+        if self.noise == True:
+            self.xs += np.random.normal(size=self.xs.shape)
         return self.xs, self.ys
 
     def load_ids(self, pathA, pathB):
