@@ -97,7 +97,8 @@ def main():
                                          A="jazz", 
                                          B="classic", 
                                          batch=args.batch_size, 
-                                         shuffle=True)
+                                         shuffle=True,
+                                         noise=False)
 
     pathA = '../dataset/preprocess/JC_J/test/'
     pathB = '../dataset/preprocess/JC_C/test/'
@@ -106,7 +107,8 @@ def main():
                                        A="jazz", 
                                        B="classic", 
                                        batch=args.batch_size, 
-                                       shuffle=True)
+                                       shuffle=True,
+                                       noise=True)
 
     # compile model graph
     model.compile(
