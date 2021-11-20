@@ -1,6 +1,6 @@
 # Music-Style-Transfer
 
-This is music style transfer with tensorflow 2.0. The one of the architectures is based on [1], but we implement it from scratch. 
+This is music style transfer with tensorflow 2.0. One of the architectures is based on [1] and [2], but we implement it from scratch. 
 
 ## Our Environment
 - Operating System:
