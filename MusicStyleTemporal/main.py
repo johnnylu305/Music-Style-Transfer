@@ -263,7 +263,7 @@ def main():
     aud_pool = AudioPool()    
     if args.phase=='train':
         for i in range(args.epoch):
-            #train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, i, writer)
+            train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, i, writer)
             if args.load_classifier:
                 test(classifier, genA, genB, val_genA, val_genB, i, writer, saver, checkpoint_path, midi_path)
     else:
