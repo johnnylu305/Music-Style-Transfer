@@ -133,7 +133,7 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
     
     # save weights
     global MAX_S
-    if saver and S>MAX_S:
+    if saver and (S>MAX_S or epoch%5==0):
         MAX_S = S
         saver.save(os.path.join(checkpoint_path, '{:03d}-{:.3f}').format(epoch, S))
     

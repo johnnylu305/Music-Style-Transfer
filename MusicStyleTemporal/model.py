@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
 from tensorflow.keras import Model, Sequential, Input, layers, initializers, activations, optimizers, losses
-from module import Encoder, ResBlock, Decoder, LSTMBlock, AutoEncoder
+from module import Encoder, ResBlock, Decoder, AutoEncoder, LSTMConv2DBlock
 
 
 class LSTMGenerator(Model):
@@ -14,6 +14,7 @@ class LSTMGenerator(Model):
             self.optimizer = optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
 
         # architexture
+        """
         nameS = "{}_StyleEocnder".format(name)
         self.styleEncoder = [Encoder(nameS),
                              ResBlock("{}1".format(nameS)),
@@ -30,36 +31,41 @@ class LSTMGenerator(Model):
                              #Decoder(name)
                              ]
         self.autoEncoder = AutoEncoder("AutoEncoder")
+        """
         # architexture
         nameA = "{}_AudioEocnder".format(name)
         self.audioEncoder = [Encoder(nameA),
-                             ResBlock("{}1".format(nameA)),
-                             ResBlock("{}2".format(nameA)),
-                             ResBlock("{}3".format(nameA)),
-                             ResBlock("{}4".format(nameA)),
-                             ResBlock("{}5".format(nameA)),
-                             ResBlock("{}6".format(nameA)),
-                             ResBlock("{}7".format(nameA)),
-                             ResBlock("{}8".format(nameA)),
-                             ResBlock("{}9".format(nameA)),
-                             ResBlock("{}10".format(nameA)),
-                             LSTMBlock("{}1".format(nameA)),
-                             Decoder(name)]
-    
+                             #ResBlock("{}1".format(nameA)),
+                             #ResBlock("{}2".format(nameA)),
+                             #ResBlock("{}3".format(nameA)),
+                             #ResBlock("{}4".format(nameA)),
+                             #ResBlock("{}5".format(nameA)),
+                             #ResBlock("{}6".format(nameA)),
+                             #ResBlock("{}7".format(nameA)),
+                             #ResBlock("{}8".format(nameA)),
+                             #ResBlock("{}9".format(nameA)),
+                             #ResBlock("{}10".format(nameA)),
+                             LSTMConv2DBlock("{}1".format(nameA)),
+                             Decoder(name)
+                             ]
+        self.counter = 0
     def call(self, audio, style):
         batch = audio.shape[0]
         style = tf.reshape(style, (-1, 4, 16, 84, 1))
         audio = tf.reshape(audio, (-1, 4, 16, 84, 1))
+        """
         for layer in self.styleEncoder:
             if isinstance(layer, LSTMBlock):
                 style, encoder_state = layer(style)
             else:
                 style = layer(style) 
         encoder_state[0], encoder_state[1] = self.autoEncoder(encoder_state[0]), self.autoEncoder(encoder_state[1])
+        """
+        
         for layer in self.audioEncoder:
-            if isinstance(layer, LSTMBlock):
+            if isinstance(layer, LSTMConv2DBlock):
                 #print(encoder_state[0].shape, encoder_state[1].shape)
-                audio, _ = layer(audio, initial_state=encoder_state)
+                audio, _ = layer(audio)#, initial_state=encoder_state)
             else:
                 audio = layer(audio)
         return audio
@@ -68,7 +74,10 @@ class LSTMGenerator(Model):
     def loss_fn(self, generation, reconstruction, original):
           G_loss = tf.reduce_mean(tf.square(generation-tf.ones_like(generation)))
           Cycle_loss = tf.reduce_mean(tf.abs(original-reconstruction))
-          return G_loss+10*Cycle_loss
+          if self.counter%200==0:
+              print(Cycle_loss.numpy())
+          self.counter += 1
+          return 200*G_loss+Cycle_loss #10*Cycle_loss
     
 
 class Discriminator(Model):
