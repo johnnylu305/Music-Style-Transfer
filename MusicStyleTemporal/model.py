@@ -11,61 +11,45 @@ class LSTMGenerator(Model):
     
         # optimizer
         if args:
-            self.optimizer = optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
+            self.optimizer = optimizers.Adam(learning_rate=args.lrg, beta_1=args.beta1)
 
-        # architexture
-        """
-        nameS = "{}_StyleEocnder".format(name)
+        # architexture 
+        nameS = "{}_StyleEncoder".format(name)
         self.styleEncoder = [Encoder(nameS),
-                             ResBlock("{}1".format(nameS)),
-                             ResBlock("{}2".format(nameS)),
-                             ResBlock("{}3".format(nameS)),
-                             ResBlock("{}4".format(nameS)),
-                             ResBlock("{}5".format(nameS)),
-                             ResBlock("{}6".format(nameS)),
-                             ResBlock("{}7".format(nameS)),
-                             ResBlock("{}8".format(nameS)),
-                             ResBlock("{}9".format(nameS)),
-                             ResBlock("{}10".format(nameS)),
-                             LSTMBlock("{}1".format(nameS)),
-                             #Decoder(name)
+                             #ResBlock("{}1".format(nameS)),
+                             #ResBlock("{}2".format(nameS)),
+                             #ResBlock("{}3".format(nameS)),
+                             LSTMConv2DBlock("{}1".format(nameS), last_Norm=False),
                              ]
         self.autoEncoder = AutoEncoder("AutoEncoder")
-        """
+        
         # architexture
-        nameA = "{}_AudioEocnder".format(name)
+        nameA = "{}_AudioEncoder".format(name)
         self.audioEncoder = [Encoder(nameA),
                              #ResBlock("{}1".format(nameA)),
                              #ResBlock("{}2".format(nameA)),
                              #ResBlock("{}3".format(nameA)),
-                             #ResBlock("{}4".format(nameA)),
-                             #ResBlock("{}5".format(nameA)),
-                             #ResBlock("{}6".format(nameA)),
-                             #ResBlock("{}7".format(nameA)),
-                             #ResBlock("{}8".format(nameA)),
-                             #ResBlock("{}9".format(nameA)),
-                             #ResBlock("{}10".format(nameA)),
-                             LSTMConv2DBlock("{}1".format(nameA)),
+                             LSTMConv2DBlock("{}1".format(nameA), last_Norm=True),
                              Decoder(name)
                              ]
-        self.counter = 0
+     
     def call(self, audio, style):
         batch = audio.shape[0]
         style = tf.reshape(style, (-1, 4, 16, 84, 1))
         audio = tf.reshape(audio, (-1, 4, 16, 84, 1))
-        """
+        
         for layer in self.styleEncoder:
-            if isinstance(layer, LSTMBlock):
+            if isinstance(layer, LSTMConv2DBlock):
                 style, encoder_state = layer(style)
             else:
                 style = layer(style) 
+        
         encoder_state[0], encoder_state[1] = self.autoEncoder(encoder_state[0]), self.autoEncoder(encoder_state[1])
-        """
         
         for layer in self.audioEncoder:
             if isinstance(layer, LSTMConv2DBlock):
                 #print(encoder_state[0].shape, encoder_state[1].shape)
-                audio, _ = layer(audio)#, initial_state=encoder_state)
+                audio, _ = layer(audio, initial_state=encoder_state)
             else:
                 audio = layer(audio)
         return audio
@@ -74,10 +58,8 @@ class LSTMGenerator(Model):
     def loss_fn(self, generation, reconstruction, original):
           G_loss = tf.reduce_mean(tf.square(generation-tf.ones_like(generation)))
           Cycle_loss = tf.reduce_mean(tf.abs(original-reconstruction))
-          if self.counter%200==0:
-              print(Cycle_loss.numpy())
-          self.counter += 1
-          return 200*G_loss+Cycle_loss #10*Cycle_loss
+          #return 200*G_loss+20*Cycle_loss 
+          return G_loss+Cycle_loss 
     
 
 class Discriminator(Model):
@@ -87,7 +69,7 @@ class Discriminator(Model):
     
         # optimizer
         if args:
-            self.optimizer = optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
+            self.optimizer = optimizers.Adam(learning_rate=args.lrd, beta_1=args.beta1)
 
         # architexture
         self.architecture = Sequential([layers.Conv2D(
@@ -126,9 +108,6 @@ class Discriminator(Model):
     def loss_fn(self, original, generation):#, mix_original, mix_generation):
         D_loss = tf.reduce_mean(tf.square(original-tf.ones_like(original)))
         D_loss += tf.reduce_mean(tf.square(generation-tf.zeros_like(generation)))
-        #Reg_loss = tf.reduce_mean(tf.square(mix_original-tf.ones_like(mix_original)))
-        #Reg_loss += tf.reduce_mean(tf.square(mix_generation-tf.zeros_like(mix_generation)))
-        #return 0.5*D_loss+1.0*0.5*Reg_loss
         return 0.5*D_loss
 
 
