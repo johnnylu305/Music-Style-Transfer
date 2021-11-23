@@ -2,16 +2,10 @@ import tensorflow as tf
 import os
 import argparse
 import datetime
-import sys
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Input
 from model import LSTMGenerator, Discriminator, Classifier
-
-current = os.path.dirname(os.path.realpath(__file__))
-parent = os.path.dirname(current)
-sys.path.append(parent)
-
 from preprocess import TrainGenerator, TestGenerator, ClassifierGenerator
 from utils import AudioPool, MIDICreator, LRSchedule, get_saver, get_writer 
 
@@ -20,7 +14,8 @@ parser = argparse.ArgumentParser(description='Music Style Transfer')
 parser.add_argument('--dataset_dir', dest='dataset_dir', default='../dataset/', help='path of the dataset')
 parser.add_argument('--type', dest='type', default='LSTM', help='LSTM/Transformer')
 parser.add_argument('--phase', dest='phase', default='train', help='train or test')
-parser.add_argument('--lr', dest='lr', type=float, default=0.0002, help='initial learning rate for adam')
+parser.add_argument('--lrg', dest='lrg', type=float, default=0.00001, help='initial learning rate for generator')
+parser.add_argument('--lrd', dest='lrd', type=float, default=0.0002, help='initial learning rate for discriminator')
 parser.add_argument('--decay_step', dest='decay_step', type=int, default=10, help='# of epoch to decay lr')
 parser.add_argument('--beta1', dest='beta1', type=float, default=0.5, help='momentum for optimizer')
 parser.add_argument('--batch_size', dest='batch_size', type=int, default=16, help='# of video for a batch')
@@ -32,9 +27,9 @@ args = parser.parse_args()
 
 MAX_S = 0
 ITER = 11216//args.batch_size
-GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER), 
+GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lrg, args.decay_step, args.epoch, ITER),
                                 beta_1=args.beta1)
-DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER), 
+DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lrd, args.decay_step, args.epoch, ITER),
                                 beta_1=args.beta1)
 
 
