@@ -130,10 +130,9 @@ class AutoEncoder(layers.Layer):
             ]
 
     def call(self, x):
-        y = x
         for layer in self.model:
-            y = layer(y)
-        return y
+            x = layer(x)
+        return x
 
 
 class Decoder(layers.Layer):
@@ -180,7 +179,7 @@ class Decoder(layers.Layer):
 
 class LSTMConv2DBlock(layers.Layer):
     
-    def __init__(self, name):
+    def __init__(self, name, last_Norm):
         super(LSTMConv2DBlock, self).__init__()
         self.model = [
             layers.ConvLSTM2D(filters=256,
@@ -204,18 +203,18 @@ class LSTMConv2DBlock(layers.Layer):
                               return_sequences=True,
                               return_state=True,
                               activation='relu', 
-                              name="{}_LSTM2".format(name)),
-            tfa.layers.InstanceNormalization(axis=-1, 
-                                   center=True, 
-                                   scale=True,
-                                   beta_initializer=initializers.Constant(value=0),
-                                   gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02), 
-                                   name="{}_IN2".format(name)),
-        ]
+                              name="{}_LSTM2".format(name))]
+        if last_Norm:
+            self.model.append(tfa.layers.InstanceNormalization(
+                                axis=-1, 
+                                center=True, 
+                                scale=True,
+                                beta_initializer=initializers.Constant(value=0),
+                                gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02), 
+                                name="{}_IN2".format(name)))
 
     def call(self, x, initial_state=None):
         encoder_state = None
-        batch = x.shape[0]
         for layer in self.model:
             if isinstance(layer, layers.ConvLSTM2D):
                 x, m_state, c_state = layer(x, initial_state=initial_state)
