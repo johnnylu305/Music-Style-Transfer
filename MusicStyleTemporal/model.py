@@ -43,12 +43,11 @@ class LSTMGenerator(Model):
                 style, encoder_state = layer(style)
             else:
                 style = layer(style) 
-        
+        # encoder_state[0]: (16, 4, 21, 256)
+        # latent code: (16, 4, 21, 16)
         encoder_state[0], encoder_state[1] = self.autoEncoder(encoder_state[0]), self.autoEncoder(encoder_state[1])
-        
         for layer in self.audioEncoder:
             if isinstance(layer, LSTMConv2DBlock):
-                #print(encoder_state[0].shape, encoder_state[1].shape)
                 audio, _ = layer(audio, initial_state=encoder_state)
             else:
                 audio = layer(audio)
@@ -57,8 +56,7 @@ class LSTMGenerator(Model):
     #@staticmethod
     def loss_fn(self, generation, reconstruction, original):
           G_loss = tf.reduce_mean(tf.square(generation-tf.ones_like(generation)))
-          Cycle_loss = tf.reduce_mean(tf.abs(original-reconstruction))
-          #return 200*G_loss+20*Cycle_loss 
+          Cycle_loss = tf.reduce_mean(tf.abs(original-reconstruction)) 
           return G_loss+Cycle_loss 
     
 
