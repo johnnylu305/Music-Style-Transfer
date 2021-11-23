@@ -41,6 +41,50 @@ class LRSchedule(optimizers.schedules.LearningRateSchedule):
         else:
             return self.lr*(self.total_step-step)/(self.total_step-self.decay_step)
 
+class MIDIReader:
+    def __init__(self, tempo=120., beat_resolution=16, num_pitches=84, slice_length=64):
+        self.tempo = tempo # bpm
+        self.beat_resolution = beat_resolution # time steps per measure
+
+        # calculate time step
+        seconds_per_beat = 60/tempo
+        time_steps_per_beat = beat_resolution/4 # assume 4 beats per measure
+        self.time_step = seconds_per_beat/time_steps_per_beat
+
+        self.sampling_frequency = 1./self.time_step
+
+        self.num_pitches = num_pitches
+        self.slice_length = slice_length
+
+    def create_piano_rolls_from_midi(self, file_name):
+        """
+        Creates tensor of size [N, 64, 84, 1] to represent given midi file. 
+        Result will be cut into slices, with excess ignored.
+
+        :file_name: File name of imported midi
+        """
+        piano_rolls = []
+
+        pm = pretty_midi.PrettyMIDI(file_name)
+        piano_roll = pm.get_piano_roll(self.sampling_frequency)
+
+        # figure out how many pitches to cut off
+        cutoff = (128. - self.num_pitches)/2
+        lowest_pitch = int(cutoff)
+        highest_pitch = int(128 - cutoff)
+        piano_roll = piano_roll[lowest_pitch:highest_pitch]
+
+        # reshape from [pitches, time] to [time, pitches]
+        piano_roll = np.moveaxis(piano_roll, 0, -1)
+
+        num_slices = int(len(piano_roll)/self.slice_length)
+        for i in range(num_slices):
+            roll_slice = piano_roll[i*self.slice_length:(i+1)*self.slice_length]
+            piano_rolls.append(roll_slice)
+
+        piano_rolls = np.expand_dims(piano_rolls, axis=3)
+
+        return tf.convert_to_tensor(piano_rolls)
 
 class MIDICreator:
     def __init__(self, tempo=120., beat_resolution=16, pitches=128, velocity=100):
@@ -53,8 +97,6 @@ class MIDICreator:
         seconds_per_beat = 60/tempo
         time_steps_per_beat = beat_resolution/4 # assume 4 beats per measure
         self.time_step = seconds_per_beat/time_steps_per_beat
-        
-
 
     def create_midi_from_piano_rolls(self, piano_rolls, file_name):
         """
@@ -134,8 +176,8 @@ def get_writer(log_dir):
 
 
 def main():
-    test_1 = "../dataset/preprocess/CP_C/train/classic_piano_train_1.npy"
-    test_2 = "../dataset/preprocess/CP_C/train/classic_piano_train_2.npy"
+    test_1 = "dataset/preprocess/CP_C/train/classic_piano_train_1.npy"
+    test_2 = "dataset/preprocess/CP_C/train/classic_piano_train_2.npy"
 
     part1 = np.load(test_1).astype(np.float32)
     part2 = np.load(test_2).astype(np.float32)
@@ -144,6 +186,10 @@ def main():
 
     midi_creator.create_midi_from_piano_rolls([part1, part2], "classic_piano_train_1")
 
+    mr = MIDIReader()
+    song = mr.create_piano_rolls_from_midi("mond_2.mid")
+
+    midi_creator.create_midi_from_piano_rolls(song, "test")
 
 if __name__=="__main__":
     main()

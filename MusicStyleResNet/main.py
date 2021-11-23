@@ -13,7 +13,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 
 from preprocess import TrainGenerator, TestGenerator, ClassifierGenerator
-from utils import AudioPool, MIDICreator, LRSchedule, get_saver, get_writer 
+from utils import AudioPool, MIDICreator, LRSchedule, MIDIReader, get_saver, get_writer 
 
 
 parser = argparse.ArgumentParser(description='Music Style Transfer')
@@ -28,6 +28,7 @@ parser.add_argument('--epoch', dest='epoch', type=int, default=100, help='# epoc
 parser.add_argument('--load_checkpoint', dest='load_checkpoint', default=None, help='load checkpoint')
 parser.add_argument('--load_classifier', dest='load_classifier', default=None, help='load checkpoint for classifier')
 parser.add_argument('--generate_midi', dest='generate_midi', default=0, help='number of epochs between generating midi files (0 means none are generated)')
+parser.add_argument('--sample_midi', dest='sample_midi', default=None, help='path for sample midi file to use as input')
 args = parser.parse_args()
 
 MAX_S = 0
@@ -173,6 +174,22 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
         BAfilename = "BA" + str(epoch)
         midicreator.create_midi_from_piano_rolls(BA_1, os.path.join(midi_path, BAfilename))        
 
+def transform_song(filename, genA, genB):
+    song_name = os.path.splitext(filename)[0]
+    mr = MIDIReader()
+    mc = MIDICreator()
+    sample_song = mr.create_piano_rolls_from_midi(filename)
+
+    base_file_name = song_name + "_base"
+    mc.create_midi_from_piano_rolls(sample_song, base_file_name)
+
+    A_song = genA(sample_song)
+    A_file_name = song_name + "_A"
+    mc.create_midi_from_piano_rolls(A_song, A_file_name)
+
+    B_song = genB(sample_song)
+    B_file_name = song_name + "_B"
+    mc.create_midi_from_piano_rolls(B_song, B_file_name)
 
 def main():
     init_epoch = 0
@@ -271,6 +288,10 @@ def main():
                 test(classifier, genA, genB, val_genA, val_genB, i, writer, saver, checkpoint_path, midi_path)
     else:
         test(classifier, genA, genB, val_genA, val_genB, None, None, None, checkpoint_path, midi_path)
+
+    # try to generate a sample from a given file
+    if args.sample_midi != None:
+        transform_song(args.sample_midi, genA, genB)
 
 
 if __name__=="__main__":

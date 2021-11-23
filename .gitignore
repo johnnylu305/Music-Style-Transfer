@@ -19,3 +19,5 @@ __pycache__
 !Classifier/logs/README.md
 !MusicStyleTemporal/checkpoints/README.md
 !MusicStyleTemporal/logs/README.md
+
+*.mid
