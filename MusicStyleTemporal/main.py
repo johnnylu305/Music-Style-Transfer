@@ -2,10 +2,16 @@ import tensorflow as tf
 import os
 import argparse
 import datetime
+import sys
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Input
 from model import LSTMGenerator, Discriminator, Classifier
+
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+sys.path.append(parent)
+
 from preprocess import TrainGenerator, TestGenerator, ClassifierGenerator
 from utils import AudioPool, MIDICreator, LRSchedule, get_saver, get_writer 
 

@@ -2,9 +2,15 @@ import tensorflow as tf
 import os
 import argparse
 import datetime
+import sys
 import numpy as np
 from tensorflow.keras import callbacks, optimizers, Input
 from model import Classifier
+
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+sys.path.append(parent)
+
 from preprocess import ClassifierTrainGenerator
 
 
