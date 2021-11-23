@@ -6,9 +6,16 @@ MusicStyleResNet/midi
 Classifier/__pycache__
 Classifier/checkpoints
 Classifier/logs
+MusicStyleTemporal/__pycache__
+MusicStyleTemporal/checkpoints
+MusicStyleTemporal/logs
+MusicStyleTemporal/midi
+__pycache__
 
 !dataset/README.md
 !MusicStyleResNet/checkpoints/README.md
 !MusicStyleResNet/logs/README.md
 !Classifier/checkpoints/README.md
 !Classifier/logs/README.md
+!MusicStyleTemporal/checkpoints/README.md
+!MusicStyleTemporal/logs/README.md

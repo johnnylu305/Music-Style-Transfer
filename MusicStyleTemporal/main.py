@@ -1,5 +1,7 @@
 import tensorflow as tf
 import os
+import sys
+sys.path.append("..")
 import argparse
 import datetime
 import numpy as np
