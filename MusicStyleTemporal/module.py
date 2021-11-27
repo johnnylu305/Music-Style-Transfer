@@ -234,7 +234,42 @@ class LSTMConv2DBlock(layers.Layer):
                 x = layer(x)
         x = tf.reshape(x, (-1, 16, 21, 256))
         return x, encoder_state
+    
+class TransformerBlock(layers.Layer):
+    def __init__(self, emb_sz):
+        super(TransformerBlock, self).__init__()
 
+        self.heads = 8
+
+        self.attention = tfa.layers.MultiHeadAttention(num_heads=self.heads, head_size=emb_sz)
+        self.ff_layer = tf.keras.Sequential([layers.Dense(emb_sz, activation="relu"),
+                                    layers.Dense(emb_sz)
+                                    ])
+        self.layer_norm = layers.LayerNormalization()
+
+    def call(self, inputs, training):
+        print(inputs.shape)
+        attention_output = self.attention([inputs, inputs, inputs])
+        attention_output += inputs
+
+        layer_norm1_output = self.layer_norm(attention_output)
+
+        ff_output = self.ff_layer(layer_norm1_output)
+        ff_output += layer_norm1_output
+
+        layer_norm2_output = self.layer_norm(ff_output)
+
+        return tf.nn.relu(layer_norm2_output)
+
+# The one from transformer assignment
+class PositionEncoder(layers.Layer):
+	def __init__(self, something_sz, emb_sz):
+		super(PositionEncoder, self).__init__()
+		self.positional_embeddings = self.add_weight("pos_embed",shape=[something_sz, emb_sz])
+
+	@tf.function
+	def call(self, x):
+		return x+self.positional_embeddings
 
 if __name__=="__main__":
     model = Encoder(name="Generator")
