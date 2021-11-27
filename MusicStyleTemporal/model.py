@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
 from tensorflow.keras import Model, Sequential, Input, layers, initializers, activations, optimizers, losses
-from module import Encoder, ResBlock, Decoder, AutoEncoder, LSTMConv2DBlock
+from module import Encoder, ResBlock, Decoder, AutoEncoder, LSTMConv2DBlock, TransformerBlock, PositionEncoder
 
 
 class LSTMGenerator(Model):
@@ -174,7 +174,45 @@ class Classifier(Model):
         # labels: (batch)
         # predictions: (batch, 1)
         return losses.BinaryCrossentropy(from_logits=False)(labels, predictions)
+    
+class TransformerGenerator(Model):
 
+    def __init__(self, args, name):
+        super(TransformerGenerator, self).__init__()
+
+        # optimizer
+        if args:
+            self.optimizer = optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
+
+        # architexture
+        '''self.architecture = Sequential([layers.Embedding()
+                                        Position_Encoding_Layer(),
+                                        TransformerBlock(),
+                                        layers.Dense(),
+                                        TransformerBlock(),
+                                        layers.Dense(),
+                                        Decoder()
+                                        ])'''
+        # I have not added dimensions for anything yet
+        self.emb_sz = 84
+        self.architecture = [# Embedding??
+                            PositionEncoder(64, self.emb_sz),
+                            TransformerBlock(self.emb_sz), # Self Attention
+                            layers.Dense(84)
+                            ]
+
+    def call(self, x):
+        x = tf.reshape(x, (16,64,84))
+        for layer in self.architecture:
+            x = layer(x)
+        x = tf.reshape(x, (16,64,84,1))
+        return x
+
+    #@staticmethod
+    def loss_fn(self, generation, reconstruction, original):
+          G_loss = tf.reduce_mean(tf.square(generation-tf.ones_like(generation)))
+          Cycle_loss = tf.reduce_mean(tf.abs(original-reconstruction))
+          return G_loss+10*Cycle_loss
 
 if __name__=="__main__":
     # comment anything related to args in model
