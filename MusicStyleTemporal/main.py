@@ -7,7 +7,7 @@ import datetime
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Input
-from model import LSTMGenerator, Discriminator, Classifier
+from model import LSTMGenerator, TransformerGenerator, Discriminator, Classifier
 from preprocess import TrainGenerator, TestGenerator, ClassifierGenerator
 from utils import AudioPool, MIDICreator, LRSchedule, get_saver, get_writer 
 
@@ -212,6 +212,9 @@ def main():
     if args.type=='LSTM':
         genA = LSTMGenerator(args, "LSTMGeneratorA")
         genB = LSTMGenerator(args, "LSTMGeneratorB")
+    if args.type=='Transformer':
+        genA = TransformerGenerator(args, "TransformerGeneratorA")
+        genB = TransformerGenerator(args, "TransformerGeneratorB")
     else:
         genA = LSTMGenerator(args, "GeneratorA")
         genB = LSTMGenerator(args, "GeneratorB")       
