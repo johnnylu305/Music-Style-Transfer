@@ -8,36 +8,36 @@ class Encoder(layers.Layer):
     def __init__(self, name):
         super(Encoder, self).__init__()
         self.model = [
-            layers.Conv2D(filters=64, 
-                          kernel_size=(7, 7), 
-                          padding="same", 
+            layers.Conv2D(filters=64,
+                          kernel_size=(7, 7),
+                          padding="same",
                           name="{}_Conv2D1".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
-                                   gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02), 
+                                   gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
                                    name="{}_IN1".format(name)),
             layers.Activation(activations.relu, name="{}_ReLu1".format(name)),
-            layers.Conv2D(filters=128, 
-                          kernel_size=(3, 3), 
-                          strides=(2, 2), 
-                          padding="same", 
+            layers.Conv2D(filters=128,
+                          kernel_size=(3, 3),
+                          strides=(2, 2),
+                          padding="same",
                           name="{}_Conv2D2".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
                                    gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
                                    name="{}_IN2".format(name)),
             layers.Activation(activations.relu, name="{}_ReLu2".format(name)),
-            layers.Conv2D(filters=256, 
-                          kernel_size=(3, 3), 
-                          strides=(2, 2), 
-                          padding="same", 
+            layers.Conv2D(filters=256,
+                          kernel_size=(3, 3),
+                          strides=(2, 2),
+                          padding="same",
                           name="{}_Conv2D3".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
                                    gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
@@ -57,16 +57,16 @@ class ResBlock(layers.Layer):
         super(ResBlock, self).__init__()
         self.model = [
             layers.Conv2D(filters=256, kernel_size=(3, 3), padding="same", name="{}_Conv2D1".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
-                                   gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02), 
+                                   gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
                                    name="{}_IN1".format(name)),
             layers.Activation(activations.relu, name="{}_ReLu1".format(name)),
             layers.Conv2D(filters=256, kernel_size=(3, 3), padding="same", name="{}_Conv2D2".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
                                    gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
@@ -90,38 +90,38 @@ class AutoEncoder(layers.Layer):
         super(AutoEncoder, self).__init__()
         self.model = [
             layers.Conv2D(filters=64, kernel_size=(3, 3), padding="same", name="{}_Conv2D1".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
-                                   gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02), 
+                                   gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
                                    name="{}_IN1".format(name)),
             layers.Activation(activations.relu, name="{}_ReLu1".format(name)),
             layers.Conv2D(filters=1, kernel_size=(3, 3), padding="same", name="{}_Conv2D2".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
                                    gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
                                    name="{}_IN2".format(name)),
             layers.Activation(activations.relu, name="{}_ReLu2".format(name)),
-            layers.Conv2DTranspose(filters=64, 
-                                   kernel_size=(3, 3), 
-                                   padding="same", 
+            layers.Conv2DTranspose(filters=64,
+                                   kernel_size=(3, 3),
+                                   padding="same",
                                    name="{}_DeConv2D1".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
-                                   gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02), 
+                                   gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
                                    name="{}_IN3".format(name)),
             layers.Activation(activations.relu, name="{}_ReLu3".format(name)),
-            layers.Conv2DTranspose(filters=256, 
-                                   kernel_size=(3, 3),  
-                                   padding="same", 
+            layers.Conv2DTranspose(filters=256,
+                                   kernel_size=(3, 3),
+                                   padding="same",
                                    name="{}_DeConv2D2".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
                                    gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
@@ -141,33 +141,33 @@ class Decoder(layers.Layer):
     def __init__(self, name):
         super(Decoder, self).__init__()
         self.model = [
-            layers.Conv2DTranspose(filters=128, 
-                                   kernel_size=(3, 3), 
+            layers.Conv2DTranspose(filters=128,
+                                   kernel_size=(3, 3),
                                    strides=(2, 2),
-                                   padding="same", 
+                                   padding="same",
                                    name="{}_DeConv2D1".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
-                                   gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02), 
+                                   gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
                                    name="{}_IN1".format(name)),
             layers.Activation(activations.relu, name="{}_ReLu1".format(name)),
-            layers.Conv2DTranspose(filters=64, 
-                                   kernel_size=(3, 3), 
-                                   strides=(2, 2), 
-                                   padding="same", 
+            layers.Conv2DTranspose(filters=64,
+                                   kernel_size=(3, 3),
+                                   strides=(2, 2),
+                                   padding="same",
                                    name="{}_DeConv2D2".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
                                    gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
                                    name="{}_IN2".format(name)),
             layers.Activation(activations.relu, name="{}_ReLu2".format(name)),
-            layers.Conv2D(filters=1, 
-                          kernel_size=(7, 7),  
-                          padding="same", 
+            layers.Conv2D(filters=1,
+                          kernel_size=(7, 7),
+                          padding="same",
                           name="{}_Conv2D1".format(name)),
             layers.Activation(activations.sigmoid, name="{}_sigmoid1".format(name))
             ]
@@ -179,14 +179,14 @@ class Decoder(layers.Layer):
 
 
 class LSTMBlock(layers.Layer):
-    
+
     def __init__(self, name):
         super(LSTMBlock, self).__init__()
         self.model = [
             layers.ConvLSTM2D(filters=256,
                               kernel_size=(3, 3),
                               padding="same",
-                              strides=(1, 1), 
+                              strides=(1, 1),
                               return_sequences=True,
                               return_state=True,
                               activation='relu',
@@ -195,10 +195,10 @@ class LSTMBlock(layers.Layer):
             layers.ConvLSTM2D(filters=256,
                               kernel_size=(3, 3),
                               padding="same",
-                              strides=(1, 1), 
+                              strides=(1, 1),
                               return_sequences=True,
                               return_state=True,
-                              activation='relu', 
+                              activation='relu',
                               name="{}_LSTM2".format(name))
         ]
 
@@ -214,14 +214,14 @@ class LSTMBlock(layers.Layer):
 
 
 class LSTMBlock(layers.Layer):
-    
+
     def __init__(self, name):
         super(LSTMBlock, self).__init__()
         self.model = [
             layers.ConvLSTM2D(filters=256,
                               kernel_size=(3, 3),
                               padding="same",
-                              strides=(1, 1), 
+                              strides=(1, 1),
                               return_sequences=True,
                               return_state=True,
                               activation='relu',
@@ -230,10 +230,10 @@ class LSTMBlock(layers.Layer):
             layers.ConvLSTM2D(filters=256,
                               kernel_size=(3, 3),
                               padding="same",
-                              strides=(1, 1), 
+                              strides=(1, 1),
                               return_sequences=True,
                               return_state=True,
-                              activation='relu', 
+                              activation='relu',
                               name="{}_LSTM2".format(name))
         ]
 
@@ -247,6 +247,41 @@ class LSTMBlock(layers.Layer):
         x = tf.reshape(x, (-1, 16, 21, 256))
         return x, encoder_state
 
+class TransformerBlock(layers.Layer):
+    def __init__(self, emb_sz):
+        super(TransformerBlock, self).__init__()
+
+        self.heads = 8
+
+        self.attention = tfa.layers.MultiHeadAttention(num_heads=self.heads, head_size=emb_sz)
+        self.ff_layer = tf.keras.Sequential([layers.Dense(emb_sz, activation="relu"),
+                                    layers.Dense(emb_sz)
+                                    ])
+        self.layer_norm = layers.LayerNormalization()
+
+    def call(self, inputs, training):
+        print(inputs.shape)
+        attention_output = self.attention([inputs, inputs, inputs])
+        attention_output += inputs
+
+        layer_norm1_output = self.layer_norm(attention_output)
+
+        ff_output = self.ff_layer(layer_norm1_output)
+        ff_output += layer_norm1_output
+
+        layer_norm2_output = self.layer_norm(ff_output)
+
+        return tf.nn.relu(layer_norm2_output)
+
+# The one from transformer assignment but idk the size
+class PositionEncoder(layers.Layer):
+	def __init__(self, something_sz, emb_sz):
+		super(PositionEncoder, self).__init__()
+		self.positional_embeddings = self.add_weight("pos_embed",shape=[something_sz, emb_sz])
+
+	@tf.function
+	def call(self, x):
+		return x+self.positional_embeddings
 
 if __name__=="__main__":
     model = Encoder(name="Generator")

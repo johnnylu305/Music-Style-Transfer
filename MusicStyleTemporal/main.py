@@ -5,9 +5,9 @@ import datetime
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Input
-from model import LSTMGenerator, Discriminator, Classifier
+from model import LSTMGenerator, TransformerGenerator, Discriminator, Classifier
 from preprocess import TrainGenerator, TestGenerator, ClassifierGenerator
-from utils import AudioPool, MIDICreator, LRSchedule, get_saver, get_writer 
+from utils import AudioPool, MIDICreator, LRSchedule, get_saver, get_writer
 
 
 parser = argparse.ArgumentParser(description='Music Style Transfer')
@@ -26,9 +26,9 @@ args = parser.parse_args()
 
 MAX_S = 0
 ITER = 11216//args.batch_size
-GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER), 
+GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER),
                                 beta_1=args.beta1)
-DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER), 
+DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER),
                                 beta_1=args.beta1)
 
 
@@ -36,39 +36,39 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool,
     gen_losses = []
     dis_losses = []
     # the length is the smallest one
-    for i, ((realA, _), (realB, _), (realABC, _)) in enumerate(zip(dataA, dataB, dataABC)): 
+    for i, ((realA, _), (realB, _), (realABC, _)) in enumerate(zip(dataA, dataB, dataABC)):
         # two tape
         # since we would like to update generator and discriminator respectively
-        with tf.GradientTape(persistent=True) as gen_tape, tf.GradientTape(persistent=True) as dis_tape: 
+        with tf.GradientTape(persistent=True) as gen_tape, tf.GradientTape(persistent=True) as dis_tape:
             # generator
             fakeA = genA(realB, realA, training=True)
             fakeB = genB(realA, realB, training=True)
 
             recA = genA(fakeB, realA, training=True)
             recB = genB(fakeA, realB, training=True)
-            
+
             # get previous fake data
             his_fakeA, his_fakeB = aud_pool(fakeA, fakeB)
             # get random noise
             noise = np.abs(np.random.normal(size=realA.shape))
-            
+
             # discriminator for A and B
             dis_realA = disA(realA+noise, training=True)
             dis_realB = disB(realB+noise, training=True)
 
             dis_fakeA = disA(fakeA+noise, training=True)
             dis_fakeB = disB(fakeB+noise, training=True)
-            
+
             dis_his_fakeA = disA(his_fakeA+noise, training=True)
             dis_his_fakeB = disB(his_fakeB+noise, training=True)
 
             # discriminator for A, B, C
             dis_realAm = disAm(realABC+noise, training=True)
             dis_realBm = disBm(realABC+noise, training=True)
-            
+
             dis_his_fakeAm = disA(his_fakeA+noise, training=True)
             dis_his_fakeBm = disB(his_fakeB+noise, training=True)
-            
+
             # loss
             gen_loss = genA.loss_fn(dis_fakeA, recB, realB)+genB.loss_fn(dis_fakeB, recA, realA)
 
@@ -82,7 +82,7 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool,
         gen_var = genA.trainable_variables+genB.trainable_variables
         dis_var = disA.trainable_variables+disB.trainable_variables
         dis_var += disAm.trainable_variables+disBm.trainable_variables
-        
+
         gradients = gen_tape.gradient(target=gen_loss,
                                   sources=gen_var)
         GOPT.apply_gradients(zip(gradients, gen_var))
@@ -116,7 +116,7 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
         acc_BA.update_state(classifier(BA)>0.5, ys_B)
         BAB = genB(BA, xs_B)
         acc_BAB.update_state(classifier(BAB)>0.5, ys_B)
-    
+
     acc_A = acc_A.result().numpy()
     acc_AB = acc_AB.result().numpy()
     acc_ABA = acc_ABA.result().numpy()
@@ -130,13 +130,13 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
     print("B: {:.3f}, BA: {:.3f}, BAB: {:.3f}, SB: {:.3f}".format(acc_B, acc_BA, acc_BAB, SB))
     S = (SA+SB)/2
     print("S: {:.3f}".format(S))
-    
+
     # save weights
     global MAX_S
     if saver and S>MAX_S:
         MAX_S = S
         saver.save(os.path.join(checkpoint_path, '{:03d}-{:.3f}').format(epoch, S))
-    
+
     # tensorbaord
     if writer:
         with writer.as_default():
@@ -166,7 +166,7 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
         # generate A from B
         BA_1 = genA(B_songs[0:1], A_songs[0:1])
         BAfilename = "BA" + str(epoch)
-        midicreator.create_midi_from_piano_rolls(BA_1, os.path.join(midi_path, BAfilename))        
+        midicreator.create_midi_from_piano_rolls(BA_1, os.path.join(midi_path, BAfilename))
 
 
 def main():
@@ -176,7 +176,7 @@ def main():
     # reuse the directory if loading checkpoint
     if args.load_checkpoint and os.path.exists(os.path.split(args.load_checkpoint)[0]):
         timestamp = args.load_checkpoint.split(os.sep)[-2]
-    
+
 
     save_dir = "./checkpoints/"
     log_dir = "./logs/"
@@ -188,31 +188,34 @@ def main():
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
     if not os.path.exists(logs_path):
-        os.makedirs(logs_path) 
+        os.makedirs(logs_path)
     if not os.path.exists(midi_path):
-        os.makedirs(midi_path) 
+        os.makedirs(midi_path)
 
     # create data loader
     dataA = TrainGenerator(path=os.path.join(args.dataset_dir,
                                              'preprocess',
                                              'JC_J',
                                              'train'), batch=args.batch_size, shuffle=True)
-    dataB = TrainGenerator(os.path.join(args.dataset_dir, 
-                                        'preprocess', 
-                                        'JC_C', 
+    dataB = TrainGenerator(os.path.join(args.dataset_dir,
+                                        'preprocess',
+                                        'JC_C',
                                         'train'), batch=args.batch_size, shuffle=True)
-    dataABC = TrainGenerator(os.path.join(args.dataset_dir, 
-                                          'preprocess', 
+    dataABC = TrainGenerator(os.path.join(args.dataset_dir,
+                                          'preprocess',
                                           'JCP_mixed'), batch=args.batch_size, shuffle=True)
 
-    
+
     if args.type=='LSTM':
         genA = LSTMGenerator(args, "LSTMGeneratorA")
         genB = LSTMGenerator(args, "LSTMGeneratorB")
+    if args.type=='Transformer':
+        genA = TransformerGenerator(args, "TransformerGeneratorA")
+        genB = TransformerGenerator(args, "TransformerGeneratorB")
     else:
         genA = LSTMGenerator(args, "GeneratorA")
-        genB = LSTMGenerator(args, "GeneratorB")       
-  
+        genB = LSTMGenerator(args, "GeneratorB")
+
     disA = Discriminator(args, "DiscriminatorA")
     disB = Discriminator(args, "DiscriminatorB")
     disAm = Discriminator(args, "DiscriminatorAm")
@@ -241,18 +244,18 @@ def main():
         classifier(Input(shape=(64, 84, 1)))
         classifier.load_weights(args.load_classifier)
         pathA = '../dataset/preprocess/JC_J/test/'
-        pathB = '../dataset/preprocess/JC_C/test/'            
-        val_genA = TestGenerator(pathA=pathA, 
-                                 pathB=None, 
-                                 A="jazz", 
-                                 B="classic", 
-                                 batch=args.batch_size, 
+        pathB = '../dataset/preprocess/JC_C/test/'
+        val_genA = TestGenerator(pathA=pathA,
+                                 pathB=None,
+                                 A="jazz",
+                                 B="classic",
+                                 batch=args.batch_size,
                                  shuffle=False)
-        val_genB = TestGenerator(pathA=None, 
-                                 pathB=pathB, 
-                                 A="jazz", 
-                                 B="classic", 
-                                 batch=args.batch_size, 
+        val_genB = TestGenerator(pathA=None,
+                                 pathB=pathB,
+                                 A="jazz",
+                                 B="classic",
+                                 batch=args.batch_size,
                                  shuffle=False)
 
         # compile model graph
@@ -260,7 +263,7 @@ def main():
             loss=classifier.loss_fn,
             metrics=["accuracy"])
 
-    aud_pool = AudioPool()    
+    aud_pool = AudioPool()
     if args.phase=='train':
         for i in range(args.epoch):
             train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, i, writer)

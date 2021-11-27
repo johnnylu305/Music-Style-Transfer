@@ -1,14 +1,14 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
 from tensorflow.keras import Model, Sequential, Input, layers, initializers, activations, optimizers, losses
-from module import Encoder, ResBlock, Decoder, LSTMBlock, AutoEncoder
+from module import Encoder, ResBlock, Decoder, LSTMBlock, TransformerBlock, PositionEncoder, AutoEncoder
 
 
 class LSTMGenerator(Model):
 
     def __init__(self, args, name):
         super(LSTMGenerator, self).__init__()
-    
+
         # optimizer
         if args:
             self.optimizer = optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
@@ -45,7 +45,7 @@ class LSTMGenerator(Model):
                              ResBlock("{}10".format(nameA)),
                              LSTMBlock("{}1".format(nameA)),
                              Decoder(name)]
-    
+
     def call(self, audio, style):
         batch = audio.shape[0]
         style = tf.reshape(style, (-1, 4, 16, 84, 1))
@@ -54,7 +54,7 @@ class LSTMGenerator(Model):
             if isinstance(layer, LSTMBlock):
                 style, encoder_state = layer(style)
             else:
-                style = layer(style) 
+                style = layer(style)
         encoder_state[0], encoder_state[1] = self.autoEncoder(encoder_state[0]), self.autoEncoder(encoder_state[1])
         for layer in self.audioEncoder:
             if isinstance(layer, LSTMBlock):
@@ -63,34 +63,73 @@ class LSTMGenerator(Model):
             else:
                 audio = layer(audio)
         return audio
-    
+
     #@staticmethod
     def loss_fn(self, generation, reconstruction, original):
           G_loss = tf.reduce_mean(tf.square(generation-tf.ones_like(generation)))
           Cycle_loss = tf.reduce_mean(tf.abs(original-reconstruction))
           return G_loss+10*Cycle_loss
-    
+
+class TransformerGenerator(Model):
+
+    def __init__(self, args, name):
+        super(TransformerGenerator, self).__init__()
+
+        # optimizer
+        if args:
+            self.optimizer = optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
+
+        # architexture
+        '''self.architecture = Sequential([layers.Embedding()
+                                        Position_Encoding_Layer(),
+                                        TransformerBlock(),
+                                        layers.Dense(),
+                                        TransformerBlock(),
+                                        layers.Dense(),
+                                        Decoder()
+                                        ])'''
+        # I have not added dimensions for anything yet
+        self.emb_sz = 84
+        self.architecture = [# Embedding??
+                            PositionEncoder(64, self.emb_sz),
+                            TransformerBlock(self.emb_sz), # Self Attention
+                            layers.Dense(84)
+                            ]
+
+    def call(self, x):
+        x = tf.reshape(x, (16,64,84))
+        for layer in self.architecture:
+            x = layer(x)
+        x = tf.reshape(x, (16,64,84,1))
+        return x
+
+    #@staticmethod
+    def loss_fn(self, generation, reconstruction, original):
+          G_loss = tf.reduce_mean(tf.square(generation-tf.ones_like(generation)))
+          Cycle_loss = tf.reduce_mean(tf.abs(original-reconstruction))
+          return G_loss+10*Cycle_loss
+
 
 class Discriminator(Model):
 
     def __init__(self, args, name):
         super(Discriminator, self).__init__()
-    
+
         # optimizer
         if args:
             self.optimizer = optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
 
         # architexture
         self.architecture = Sequential([layers.Conv2D(
-                                            filters=64, 
-                                            kernel_size=(7, 7), 
+                                            filters=64,
+                                            kernel_size=(7, 7),
                                             strides=(2, 2),
                                             padding="same",
                                             name="{}_Conv2D1".format(name)),
                                         layers.LeakyReLU(alpha=0.2, name="{}_LReLu1".format(name)),
                                         layers.Conv2D(
-                                            filters=256, 
-                                            kernel_size=(7, 7), 
+                                            filters=256,
+                                            kernel_size=(7, 7),
                                             strides=(2, 2),
                                             padding="same",
                                             name="{}_Conv2D2".format(name)),
@@ -103,12 +142,12 @@ class Discriminator(Model):
                                             name="{}_IN1".format(name)),
                                         layers.LeakyReLU(alpha=0.2, name="{}_LReLu2".format(name)),
                                         layers.Conv2D(
-                                            filters=1, 
+                                            filters=1,
                                             kernel_size=(7, 7),
                                             padding="same",
                                             name="{}_Conv2D3".format(name)),
                                         ])
-    
+
     def call(self, x):
         x = self.architecture(x)
         return x
@@ -128,52 +167,52 @@ class Classifier(Model):
     def __init__(self, args, name):
         super(Classifier, self).__init__()
         self.model = Sequential([
-            layers.Conv2D(filters=64, 
-                          kernel_size=(1, 12), 
+            layers.Conv2D(filters=64,
+                          kernel_size=(1, 12),
                           strides=(1, 12),
-                          padding="same", 
+                          padding="same",
                           name="{}_Conv2D1".format(name)),
             layers.LeakyReLU(alpha=0.2, name="{}_LReLu1".format(name)),
-            layers.Conv2D(filters=128, 
-                          kernel_size=(4, 1), 
-                          strides=(4, 1), 
-                          padding="same", 
+            layers.Conv2D(filters=128,
+                          kernel_size=(4, 1),
+                          strides=(4, 1),
+                          padding="same",
                           name="{}_Conv2D2".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
                                    gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
                                    name="{}_IN1".format(name)),
-            layers.LeakyReLU(alpha=0.2, name="{}_LReLu2".format(name)),           
-            layers.Conv2D(filters=256, 
-                          kernel_size=(2, 1), 
-                          strides=(2, 1), 
-                          padding="same", 
+            layers.LeakyReLU(alpha=0.2, name="{}_LReLu2".format(name)),
+            layers.Conv2D(filters=256,
+                          kernel_size=(2, 1),
+                          strides=(2, 1),
+                          padding="same",
                           name="{}_Conv2D3".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
                                    gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
                                    name="{}_IN3".format(name)),
-            layers.LeakyReLU(alpha=0.2, name="{}_LReLu3".format(name)),     
-            layers.Conv2D(filters=512, 
-                          kernel_size=(8, 1), 
-                          strides=(8, 1), 
-                          padding="same", 
+            layers.LeakyReLU(alpha=0.2, name="{}_LReLu3".format(name)),
+            layers.Conv2D(filters=512,
+                          kernel_size=(8, 1),
+                          strides=(8, 1),
+                          padding="same",
                           name="{}_Conv2D4".format(name)),
-            tfa.layers.InstanceNormalization(axis=3, 
-                                   center=True, 
+            tfa.layers.InstanceNormalization(axis=3,
+                                   center=True,
                                    scale=True,
                                    beta_initializer=initializers.Constant(value=0),
                                    gamma_initializer=initializers.RandomNormal(mean=1.0, stddev=0.02),
                                    name="{}_IN4".format(name)),
-            layers.LeakyReLU(alpha=0.2, name="{}_LReLu4".format(name)),     
-            layers.Conv2D(filters=1, 
+            layers.LeakyReLU(alpha=0.2, name="{}_LReLu4".format(name)),
+            layers.Conv2D(filters=1,
                           kernel_size=(1, 7),
                           strides=(1, 7),
-                          padding="same", 
+                          padding="same",
                           name="{}_Conv2D5".format(name),
                           activation='sigmoid'),
             layers.Reshape(target_shape=[1])
@@ -192,15 +231,16 @@ class Classifier(Model):
 
 if __name__=="__main__":
     # comment anything related to args in model
-    model = Generator(args=None, name="Generator")
-    output = model(Input(shape=(64, 84, 1)))
+    #model = Generator(args=None, name="Generator")
+    model = TransformerGenerator(args=None, name="TransformerGenerator")
+    output = model(Input(shape=(16, 64, 84, 1)))
     # (None, 64, 84, 1)
     print(output.shape)
-    model.architecture.summary()
+    #model.architecture.summary()
 
     # comment anything related to args in model
     model = Discriminator(args=None, name="Discriminator")
     output = model(Input(shape=(64, 84, 1)))
     # (None, 256, 256, 1)
     print(output.shape)
-    model.architecture.summary()
+    #model.architecture.summary()
