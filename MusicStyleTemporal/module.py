@@ -263,9 +263,9 @@ class TransformerBlock(layers.Layer):
 
 # The one from transformer assignment
 class PositionEncoder(layers.Layer):
-	def __init__(self, something_sz, emb_sz):
+	def __init__(self, sample_length, emb_sz):
 		super(PositionEncoder, self).__init__()
-		self.positional_embeddings = self.add_weight("pos_embed",shape=[something_sz, emb_sz])
+		self.positional_embeddings = self.add_weight("pos_embed",shape=[sample_length, emb_sz])
 
 	@tf.function
 	def call(self, x):
