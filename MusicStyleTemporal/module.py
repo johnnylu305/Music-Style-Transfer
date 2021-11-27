@@ -248,7 +248,6 @@ class TransformerBlock(layers.Layer):
         self.layer_norm = layers.LayerNormalization()
 
     def call(self, inputs, training):
-        print(inputs.shape)
         attention_output = self.attention([inputs, inputs, inputs])
         attention_output += inputs
 
