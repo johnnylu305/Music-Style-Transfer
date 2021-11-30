@@ -3,15 +3,11 @@ import os
 import argparse
 import datetime
 import sys
+sys.path.append("..")
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Input
 from model import Generator, Discriminator, Classifier
-    
-current = os.path.dirname(os.path.realpath(__file__))
-parent = os.path.dirname(current)
-sys.path.append(parent)
-
 from preprocess import TrainGenerator, TestGenerator, ClassifierGenerator
 from utils import AudioPool, MIDICreator, LRSchedule, MIDIReader, get_saver, get_writer 
 
@@ -107,27 +103,44 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
     acc_A = tf.keras.metrics.Accuracy()
     acc_AB = tf.keras.metrics.Accuracy()
     acc_ABA = tf.keras.metrics.Accuracy()
-    for xs, ys in test_genA:
-        acc_A.update_state(classifier(xs)>0.5, ys)
-        AB = genB(xs)
-        acc_AB.update_state(classifier(AB)>0.5, ys)
+    acc_B = tf.keras.metrics.Accuracy()
+    acc_BA = tf.keras.metrics.Accuracy()
+    acc_BAB = tf.keras.metrics.Accuracy()
+    # make sure test_genA and test_genB have the same number of data
+    for i, ((xs_A, ys_A), (xs_B, ys_B)) in enumerate(zip(test_genA, test_genB)):
+        acc_A.update_state(classifier(xs_A)>0.5, ys_A)
+        AB = genB(xs_A)
+        acc_AB.update_state(classifier(AB)>0.5, ys_A)
         ABA = genA(AB)
-        acc_ABA.update_state(classifier(ABA)>0.5, ys)
+        acc_ABA.update_state(classifier(ABA)>0.5, ys_A)
+
+        acc_B.update_state(classifier(xs_B)>0.5, ys_B)
+        BA = genA(xs_B)
+        acc_BA.update_state(classifier(BA)>0.5, ys_B)
+        BAB = genB(BA)
+        acc_BAB.update_state(classifier(BAB)>0.5, ys_B)
+        if args.phase=='test':
+            midicreator = MIDICreator()
+            Afilename = "A" + str(i)
+            ABfilename = "AB" + str(i)
+            ABAfilename = "ABA" + str(i)
+            midicreator.create_midi_from_piano_rolls(xs_A, os.path.join(midi_path, 'test', Afilename))
+            midicreator.create_midi_from_piano_rolls(AB, os.path.join(midi_path, 'test', ABfilename))
+            midicreator.create_midi_from_piano_rolls(ABA, os.path.join(midi_path, 'test', ABAfilename))
+
+            Bfilename = "B" + str(i)
+            BAfilename = "BA" + str(i)
+            BABfilename = "BAB" + str(i)
+            midicreator.create_midi_from_piano_rolls(xs_B, os.path.join(midi_path, 'test', Bfilename))
+            midicreator.create_midi_from_piano_rolls(BA, os.path.join(midi_path, 'test', BAfilename))
+            midicreator.create_midi_from_piano_rolls(BAB, os.path.join(midi_path, 'test', BABfilename))
+
     acc_A = acc_A.result().numpy()
     acc_AB = acc_AB.result().numpy()
     acc_ABA = acc_ABA.result().numpy()
     SA = (acc_A+acc_ABA-2*acc_AB)/2
     print("A: {:.3f}, AB: {:.3f}, ABA: {:.3f}, SA: {:.3f}".format(acc_A, acc_AB, acc_ABA, SA))
 
-    acc_B = tf.keras.metrics.Accuracy()
-    acc_BA = tf.keras.metrics.Accuracy()
-    acc_BAB = tf.keras.metrics.Accuracy()
-    for xs, ys in test_genB: 
-        acc_B.update_state(classifier(xs)>0.5, ys)
-        BA = genA(xs)
-        acc_BA.update_state(classifier(BA)>0.5, ys)
-        BAB = genB(BA)
-        acc_BAB.update_state(classifier(BAB)>0.5, ys)
     acc_B = acc_B.result().numpy()
     acc_BA = acc_BA.result().numpy()
     acc_BAB = acc_BAB.result().numpy()
@@ -138,7 +151,7 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
     
     # save weights
     global MAX_S
-    if saver and S>MAX_S:
+    if saver and (S>MAX_S or epoch%5==0):
         MAX_S = S
         saver.save(os.path.join(checkpoint_path, '{:03d}-{:.3f}').format(epoch, S))
     
@@ -157,22 +170,22 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
 
     # generate midi files
     # only the first sample from each dataset is tested
-    if(int(args.generate_midi) > 0 and epoch%int(args.generate_midi) == 0):
+    if(int(args.generate_midi) > 0 and epoch%int(args.generate_midi) == 0) and args.phase=='train':
         midicreator = MIDICreator()
 
         # generate B from A
         A_songs, _ = test_genA[0]
-        A_song = A_songs[0:1]
-        AB_1 = genB(A_song)
+        B_songs, _ = test_genB[0]
+        AB_1 = genB(A_songs[0:1], B_songs[0:1])
         ABfilename = "AB" + str(epoch)
         print(ABfilename)
         midicreator.create_midi_from_piano_rolls(AB_1, os.path.join(midi_path, ABfilename))
 
         # generate A from B
-        B_songs, _ = test_genB[0]
-        BA_1 = genA(B_songs[0:1])
+        BA_1 = genA(B_songs[0:1], A_songs[0:1])
         BAfilename = "BA" + str(epoch)
-        midicreator.create_midi_from_piano_rolls(BA_1, os.path.join(midi_path, BAfilename))        
+        midicreator.create_midi_from_piano_rolls(BA_1, os.path.join(midi_path, BAfilename))               
+
 
 def transform_song(filename, genA, genB):
     song_name = os.path.splitext(filename)[0]
@@ -213,7 +226,9 @@ def main():
         os.makedirs(logs_path) 
     if not os.path.exists(midi_path):
         os.makedirs(midi_path) 
-
+    if not os.path.exists(os.path.join(midi_path, 'test')) and args.phase=='test':
+        os.makedirs(os.path.join(midi_path, 'test'))
+        
     # create data loader
     dataA = TrainGenerator(path=os.path.join(args.dataset_dir,
                                              'preprocess',

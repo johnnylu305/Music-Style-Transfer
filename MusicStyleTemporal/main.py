@@ -107,7 +107,7 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
     acc_BA = tf.keras.metrics.Accuracy()
     acc_BAB = tf.keras.metrics.Accuracy()
     # make sure test_genA and test_genB have the same number of data
-    for (xs_A, ys_A), (xs_B, ys_B) in zip(test_genA, test_genB):
+    for i, ((xs_A, ys_A), (xs_B, ys_B)) in enumerate(zip(test_genA, test_genB)):
         acc_A.update_state(classifier(xs_A)>0.5, ys_A)
         AB = genB(xs_A, xs_B)
         acc_AB.update_state(classifier(AB)>0.5, ys_A)
@@ -119,7 +119,22 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
         acc_BA.update_state(classifier(BA)>0.5, ys_B)
         BAB = genB(BA, xs_B)
         acc_BAB.update_state(classifier(BAB)>0.5, ys_B)
-    
+        if args.phase=='test':
+            midicreator = MIDICreator()
+            Afilename = "A" + str(i)
+            ABfilename = "AB" + str(i)
+            ABAfilename = "ABA" + str(i)
+            midicreator.create_midi_from_piano_rolls(xs_A, os.path.join(midi_path, 'test', Afilename))
+            midicreator.create_midi_from_piano_rolls(AB, os.path.join(midi_path, 'test', ABfilename))
+            midicreator.create_midi_from_piano_rolls(ABA, os.path.join(midi_path, 'test', ABAfilename))
+
+            Bfilename = "B" + str(i)
+            BAfilename = "BA" + str(i)
+            BABfilename = "BAB" + str(i)
+            midicreator.create_midi_from_piano_rolls(xs_B, os.path.join(midi_path, 'test', Bfilename))
+            midicreator.create_midi_from_piano_rolls(BA, os.path.join(midi_path, 'test', BAfilename))
+            midicreator.create_midi_from_piano_rolls(BAB, os.path.join(midi_path, 'test', BABfilename))
+
     acc_A = acc_A.result().numpy()
     acc_AB = acc_AB.result().numpy()
     acc_ABA = acc_ABA.result().numpy()
@@ -155,7 +170,7 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
 
     # generate midi files
     # only the first sample from each dataset is tested
-    if(int(args.generate_midi) > 0 and epoch%int(args.generate_midi) == 0):
+    if(int(args.generate_midi) > 0 and epoch%int(args.generate_midi) == 0) and args.phase=='train':
         midicreator = MIDICreator()
 
         # generate B from A
@@ -194,6 +209,8 @@ def main():
         os.makedirs(logs_path) 
     if not os.path.exists(midi_path):
         os.makedirs(midi_path) 
+    if not os.path.exists(os.path.join(midi_path, 'test')) and args.phase=='test':
+        os.makedirs(os.path.join(midi_path, 'test'))
 
     # create data loader
     dataA = TrainGenerator(path=os.path.join(args.dataset_dir,
