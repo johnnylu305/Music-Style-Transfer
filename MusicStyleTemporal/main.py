@@ -31,7 +31,7 @@ args = parser.parse_args()
 MAX_S = 0
 ITER = 11216//args.batch_size
 GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lrg, args.decay_step, args.epoch, ITER),
-                                beta_1=args.beta1)#0.9, clipnorm=1.0)
+                                beta_1=args.beta1)
 DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lrd, args.decay_step, args.epoch, ITER),
                                 beta_1=args.beta1)
 

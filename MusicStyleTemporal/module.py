@@ -174,7 +174,6 @@ class LSTMConv2DBlock(layers.Layer):
                               strides=(1, 1), 
                               return_sequences=True,
                               return_state=True,
-                              activation='relu',
                               name="{}_LSTM1".format(name))]
         if last_Norm:
             self.model.append(tfa.layers.InstanceNormalization(
@@ -209,7 +208,8 @@ class LSTMConv2DBlock(layers.Layer):
             else:
                 x = layer(x)
         return x, encoder_state
-    
+   
+
 class TransformerBlock(layers.Layer):
     def __init__(self, emb_sz):
         super(TransformerBlock, self).__init__()
