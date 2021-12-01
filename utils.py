@@ -98,6 +98,9 @@ class MIDICreator:
         time_steps_per_beat = beat_resolution/4 # assume 4 beats per measure
         self.time_step = seconds_per_beat/time_steps_per_beat
 
+        self.note_on = np.zeros(self.total_num_pitches, dtype=bool) # keeps track of whether a note is on or off right now. (pitch: status)
+        self.note_starts = np.zeros(self.total_num_pitches) # keeps track of most recent note-on time
+
     def create_midi_from_piano_rolls(self, piano_rolls, file_name):
         """
         Creates a midi file with the given filename from a list of piano rolls
@@ -106,19 +109,21 @@ class MIDICreator:
         :file_name: File name of exported midi
         """
         
-        time_per_roll = np.shape(piano_rolls)[1]*self.time_step
+        steps_per_roll = np.shape(piano_rolls)[1]
 
         # create midi
         midi = pretty_midi.PrettyMIDI(initial_tempo = self.tempo)
 
         for i in range(len(piano_rolls)):
-            start_time = i*time_per_roll
-            midi = self.write_piano_roll_to_midi(piano_rolls[i], midi, start_time, self.time_step)
+            start_step = i*steps_per_roll
+            midi = self.write_piano_roll_to_midi(piano_rolls[i], midi, start_step)
 
-        midi.write(file_name+".mid")
-        
+        midi.write(file_name+".mid")        
 
-    def write_piano_roll_to_midi(self, piano_roll, midi, start_time, time_step):
+    def write_piano_roll_to_midi(self, piano_roll, midi, start_step):
+        # calculations
+        avg = np.mean(piano_roll)
+        print("average weight: {}".format(avg))
 
         # create instrument
         piano_program = pretty_midi.instrument_name_to_program("Acoustic Grand Piano")
@@ -130,9 +135,6 @@ class MIDICreator:
         padding = int((self.total_num_pitches - pitches_in_piano_roll)/2)
 
         # loop through time
-        note_on = np.zeros(self.total_num_pitches, dtype=bool) # keeps track of whether a note is on or off right now. (pitch: status)
-        note_starts = np.zeros(self.total_num_pitches) # keeps track of most recent note-on time
-
         for t in range(len(piano_roll)):
             notes_now = piano_roll[t]
 
@@ -141,15 +143,15 @@ class MIDICreator:
                 pitch_on = notes_now[p] > 0.5 # count a note as on if it is more than 0.5 on
 
                 # if pitch has changed status
-                if(pitch_on != note_on[pitch]):
+                if(pitch_on != self.note_on[pitch]):
                     if(pitch_on): # starting a new note
-                        note_starts[pitch] = t
+                        self.note_starts[pitch] = t + start_step
                     else: # ending a note
-                        note_start = (note_starts[pitch])*time_step + start_time
-                        note_end = t*time_step + start_time
+                        note_start = (self.note_starts[pitch])*self.time_step
+                        note_end = (t + start_step)*self.time_step
                         note = pretty_midi.Note(velocity=self.velocity, pitch=pitch, start=note_start, end=note_end)
                         instrument.notes.append(note)
-                    note_on[pitch] = pitch_on
+                    self.note_on[pitch] = pitch_on
 
 
         midi.instruments.append(instrument)
@@ -174,20 +176,19 @@ def get_writer(log_dir):
     summary_writer = tf.summary.create_file_writer(log_dir)
     return summary_writer
 
-
 def main():
-    test_1 = "dataset/preprocess/CP_C/train/classic_piano_train_1.npy"
-    test_2 = "dataset/preprocess/CP_C/train/classic_piano_train_2.npy"
+    # test_1 = "dataset/preprocess/CP_C/train/classic_piano_train_1.npy"
+    # test_2 = "dataset/preprocess/CP_C/train/classic_piano_train_2.npy"
 
-    part1 = np.load(test_1).astype(np.float32)
-    part2 = np.load(test_2).astype(np.float32)
+    # part1 = np.load(test_1).astype(np.float32)
+    # part2 = np.load(test_2).astype(np.float32)
 
     midi_creator = MIDICreator()
 
-    midi_creator.create_midi_from_piano_rolls([part1, part2], "classic_piano_train_1")
+    #midi_creator.create_midi_from_piano_rolls([part1, part2], "classic_piano_train_1")
 
     mr = MIDIReader()
-    song = mr.create_piano_rolls_from_midi("mond_2.mid")
+    song = mr.create_piano_rolls_from_midi("mond_1.mid")
 
     midi_creator.create_midi_from_piano_rolls(song, "test")
 
