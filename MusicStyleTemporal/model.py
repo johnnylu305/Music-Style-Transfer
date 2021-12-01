@@ -14,37 +14,42 @@ class LSTMGenerator(Model):
             self.optimizer = optimizers.Adam(learning_rate=args.lrg, beta_1=args.beta1)
 
         # architexture 
+        
         nameS = "{}_StyleEncoder".format(name)
         self.styleEncoder = [Encoder(nameS),
-                             #ResBlock("{}1".format(nameS)),
-                             #ResBlock("{}2".format(nameS)),
-                             #ResBlock("{}3".format(nameS)),
-                             LSTMConv2DBlock("{}1".format(nameS), last_Norm=False),
+                             LSTMConv2DBlock("{}1".format(nameS), last_Norm=False, cnn=False),
                              ]
         self.autoEncoder = AutoEncoder("AutoEncoder")
-        
+       
         # architexture
         nameA = "{}_AudioEncoder".format(name)
         self.audioEncoder = [Encoder(nameA),
-                             #ResBlock("{}1".format(nameA)),
-                             #ResBlock("{}2".format(nameA)),
-                             #ResBlock("{}3".format(nameA)),
-                             LSTMConv2DBlock("{}1".format(nameA), last_Norm=True),
+                             LSTMConv2DBlock("{}1".format(nameA), last_Norm=True, cnn=True),
+                             ResBlock("{}1".format(nameA)),
+                             ResBlock("{}2".format(nameA)),
+                             ResBlock("{}3".format(nameA)),
+                             ResBlock("{}4".format(nameA)),
+                             ResBlock("{}5".format(nameA)),
+                             ResBlock("{}6".format(nameA)),
+                             ResBlock("{}7".format(nameA)),
+                             ResBlock("{}8".format(nameA)),
+                             ResBlock("{}9".format(nameA)),
+                             ResBlock("{}10".format(nameA)),
                              Decoder(name)
                              ]
      
     def call(self, audio, style):
         batch = audio.shape[0]
-        style = tf.reshape(style, (-1, 4, 16, 84, 1))
-        audio = tf.reshape(audio, (-1, 4, 16, 84, 1))
+        style = tf.reshape(style, (-1, 64, 1, 84, 1))
+        audio = tf.reshape(audio, (-1, 64, 1, 84, 1))
         
         for layer in self.styleEncoder:
             if isinstance(layer, LSTMConv2DBlock):
                 style, encoder_state = layer(style)
             else:
                 style = layer(style) 
-        # encoder_state[0]: (16, 4, 21, 256)
-        # latent code: (16, 4, 21, 16)
+        # encoder_state[0]: (batch, 1, 21, 128)
+        # latent code: (batch, 1, 3, 128)
         encoder_state[0], encoder_state[1] = self.autoEncoder(encoder_state[0]), self.autoEncoder(encoder_state[1])
         for layer in self.audioEncoder:
             if isinstance(layer, LSTMConv2DBlock):
@@ -57,8 +62,8 @@ class LSTMGenerator(Model):
     def loss_fn(self, generation, reconstruction, original):
           G_loss = tf.reduce_mean(tf.square(generation-tf.ones_like(generation)))
           Cycle_loss = tf.reduce_mean(tf.abs(original-reconstruction)) 
-          #return G_loss+Cycle_loss 
-          return G_loss+10*Cycle_loss    
+          return G_loss+10*Cycle_loss 
+ 
 
 class Discriminator(Model):
 

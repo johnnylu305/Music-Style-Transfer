@@ -31,8 +31,8 @@ MAX_S = 0
 ITER = 11216//args.batch_size
 GOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER), 
                                 beta_1=args.beta1)
-DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER), 
-                                beta_1=args.beta1)
+#DOPT = tf.keras.optimizers.Adam(learning_rate=LRSchedule(args.lr, args.decay_step, args.epoch, ITER), 
+#                                beta_1=args.beta1)
 
 
 def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, epoch, writer):
@@ -92,7 +92,7 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool,
 
         gradients = dis_tape.gradient(target=dis_loss,
                                   sources=dis_var)
-        DOPT.apply_gradients(zip(gradients, dis_var))
+        GOPT.apply_gradients(zip(gradients, dis_var))
 
     with writer.as_default():
         tf.summary.scalar('Generator Loss', np.mean(gen_losses), step=epoch)
@@ -172,19 +172,24 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
     # only the first sample from each dataset is tested
     if(int(args.generate_midi) > 0 and epoch%int(args.generate_midi) == 0) and args.phase=='train':
         midicreator = MIDICreator()
+        for i in range(3):
+            # generate B from A
+            A_songs, _ = test_genA[i]
+            B_songs, _ = test_genB[i]
+            AB = genB(A_songs[i:i+1])
+            ABA = genA(AB)
+            ABfilename = "AB_{}_{}".format(epoch, i)
+            ABAfilename = "ABA_{}_{}".format(epoch, i)
+            midicreator.create_midi_from_piano_rolls(AB, os.path.join(midi_path, ABfilename))
+            midicreator.create_midi_from_piano_rolls(ABA, os.path.join(midi_path, ABAfilename))
 
-        # generate B from A
-        A_songs, _ = test_genA[0]
-        B_songs, _ = test_genB[0]
-        AB_1 = genB(A_songs[0:1], B_songs[0:1])
-        ABfilename = "AB" + str(epoch)
-        print(ABfilename)
-        midicreator.create_midi_from_piano_rolls(AB_1, os.path.join(midi_path, ABfilename))
-
-        # generate A from B
-        BA_1 = genA(B_songs[0:1], A_songs[0:1])
-        BAfilename = "BA" + str(epoch)
-        midicreator.create_midi_from_piano_rolls(BA_1, os.path.join(midi_path, BAfilename))               
+            # generate A from B
+            BA = genA(B_songs[i:i+1])
+            BAB = genA(BA)
+            BAfilename = "BA_{}_{}".format(epoch, i)
+            BABfilename = "BAB_{}_{}".format(epoch, i)
+            midicreator.create_midi_from_piano_rolls(BA, os.path.join(midi_path, BAfilename))        
+            midicreator.create_midi_from_piano_rolls(BAB, os.path.join(midi_path, BABfilename))                
 
 
 def transform_song(filename, genA, genB):

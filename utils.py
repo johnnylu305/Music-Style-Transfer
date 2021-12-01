@@ -30,10 +30,10 @@ class AudioPool:
 
 class LRSchedule(optimizers.schedules.LearningRateSchedule):
     
-    def __init__(self, lr, decay_epoch, total_epoch, batch):
+    def __init__(self, lr, decay_epoch, total_epoch, iteration):
         self.lr = lr
-        self.decay_step = decay_epoch*batch
-        self.total_step = total_epoch*batch
+        self.decay_step = decay_epoch*iteration
+        self.total_step = total_epoch*iteration
 
     def __call__(self, step):
         if step<self.decay_step:
