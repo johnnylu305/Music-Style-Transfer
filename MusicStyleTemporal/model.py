@@ -187,7 +187,7 @@ class TransformerGenerator(Model):
 
         # optimizer
         if args:
-            self.optimizer = optimizers.Adam(learning_rate=args.lr, beta_1=args.beta1)
+            self.optimizer = optimizers.Adam(learning_rate=args.lrg, beta_1=args.beta1)
 
         # architexture
         '''self.architecture = Sequential([layers.Embedding()
@@ -206,11 +206,11 @@ class TransformerGenerator(Model):
                             layers.Dense(84)
                             ]
 
-    def call(self, x):
-        x = tf.reshape(x, (16,64,84))
+    def call(self, x, y):
+        x = tf.reshape(x, (-1,64,84))
         for layer in self.architecture:
             x = layer(x)
-        x = tf.reshape(x, (16,64,84,1))
+        x = tf.reshape(x, (-1,64,84,1))
         return x
 
     #@staticmethod
