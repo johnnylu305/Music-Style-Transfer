@@ -80,7 +80,7 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool,
             dis_loss += disAm.loss_fn(dis_realAm, dis_his_fakeAm)+disBm.loss_fn(dis_realBm, dis_his_fakeB)
             gen_losses.append(gen_loss)
             dis_losses.append(dis_loss)
-            if i%100==0:
+            if i%250==0:
                 print("Gen: {:.3f}, Dis: {:.3f}".format(gen_loss.numpy(), dis_loss.numpy()))
         # gradient
         gen_var = genA.trainable_variables+genB.trainable_variables
@@ -102,7 +102,7 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool,
 
 def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, checkpoint_path, midi_path):
     acc_A = tf.keras.metrics.Accuracy()
-    acc_AB = tf.kieras.metrics.Accuracy()
+    acc_AB = tf.keras.metrics.Accuracy()
     acc_ABA = tf.keras.metrics.Accuracy()
     acc_B = tf.keras.metrics.Accuracy()
     acc_BA = tf.keras.metrics.Accuracy()
@@ -290,6 +290,7 @@ def main():
     aud_pool = AudioPool()    
     if args.phase=='train':
         for i in range(args.epoch):
+            print(i)
             train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, i, writer)
             if args.load_classifier:
                 test(classifier, genA, genB, val_genA, val_genB, i, writer, saver, checkpoint_path, midi_path)

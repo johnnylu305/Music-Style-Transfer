@@ -62,7 +62,7 @@ class LSTMGenerator(Model):
     def loss_fn(self, generation, reconstruction, original):
           G_loss = tf.reduce_mean(tf.square(generation-tf.ones_like(generation)))
           Cycle_loss = tf.reduce_mean(tf.abs(original-reconstruction)) 
-          return G_loss+10*Cycle_loss 
+          return G_loss+Cycle_loss 
  
 
 class Discriminator(Model):
