@@ -201,6 +201,9 @@ class TransformerGenerator(Model):
         self.emb_sz = 84
         self.architecture = [# Can add embedding/encoder
                             PositionEncoder(64, self.emb_sz),
+                            TransformerBlock(self.emb_sz), # Self Attention
+                            layers.Dense(84, activation='relu'),
+                            PositionEncoder(64, self.emb_sz),
                             TransformerBlock(self.emb_sz), # Attention
                             layers.Dense(84)
                             ]
