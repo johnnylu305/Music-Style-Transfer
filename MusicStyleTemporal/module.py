@@ -214,9 +214,9 @@ class TransformerBlock(layers.Layer):
     def __init__(self, emb_sz):
         super(TransformerBlock, self).__init__()
 
-        self.heads = 8
+        self.heads = 3
 
-        self.attention = tfa.layers.MultiHeadAttention(num_heads=self.heads, head_size=emb_sz)
+        self.attention = tfa.layers.MultiHeadAttention(num_heads=self.heads, head_size=emb_sz/2)
         self.ff_layer = tf.keras.Sequential([layers.Dense(emb_sz, activation="relu"),
                                     layers.Dense(emb_sz)
                                     ])
