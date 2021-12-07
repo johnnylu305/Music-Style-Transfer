@@ -172,26 +172,27 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
 
     # generate midi files
     # only the first sample from each dataset is tested
-    if(int(args.generate_midi) > 0 and epoch%int(args.generate_midi) == 0) and args.phase=='train':
-        midicreator = MIDICreator()
-        for i in range(3):
-            # generate B from A
-            A_songs, _ = test_genA[i]
-            B_songs, _ = test_genB[i]
-            AB = genB(A_songs[i:i+1], B_songs[i:i+1])
-            ABA = genA(AB, A_songs[i:i+1])
-            ABfilename = "AB_{}_{}".format(epoch, i)
-            ABAfilename = "ABA_{}_{}".format(epoch, i)
-            midicreator.create_midi_from_piano_rolls(AB, os.path.join(midi_path, ABfilename))
-            midicreator.create_midi_from_piano_rolls(ABA, os.path.join(midi_path, ABAfilename))
+    if args.phase=='train':
+      if(int(args.generate_midi) > 0 and epoch%int(args.generate_midi) == 0):
+          midicreator = MIDICreator()
+          for i in range(3):
+              # generate B from A
+              A_songs, _ = test_genA[i]
+              B_songs, _ = test_genB[i]
+              AB = genB(A_songs[i:i+1], B_songs[i:i+1])
+              ABA = genA(AB, A_songs[i:i+1])
+              ABfilename = "AB_{}_{}".format(epoch, i)
+              ABAfilename = "ABA_{}_{}".format(epoch, i)
+              midicreator.create_midi_from_piano_rolls(AB, os.path.join(midi_path, ABfilename))
+              midicreator.create_midi_from_piano_rolls(ABA, os.path.join(midi_path, ABAfilename))
 
-            # generate A from B
-            BA = genA(B_songs[i:i+1], A_songs[i:i+1])
-            BAB = genA(BA, B_songs[i:i+1])
-            BAfilename = "BA_{}_{}".format(epoch, i)
-            BABfilename = "BAB_{}_{}".format(epoch, i)
-            midicreator.create_midi_from_piano_rolls(BA, os.path.join(midi_path, BAfilename))
-            midicreator.create_midi_from_piano_rolls(BAB, os.path.join(midi_path, BABfilename))
+              # generate A from B
+              BA = genA(B_songs[i:i+1], A_songs[i:i+1])
+              BAB = genA(BA, B_songs[i:i+1])
+              BAfilename = "BA_{}_{}".format(epoch, i)
+              BABfilename = "BAB_{}_{}".format(epoch, i)
+              midicreator.create_midi_from_piano_rolls(BA, os.path.join(midi_path, BAfilename))
+              midicreator.create_midi_from_piano_rolls(BAB, os.path.join(midi_path, BABfilename))
 
 def transform_song(filename, genA, genB):
     song_name = os.path.splitext(filename)[0]
