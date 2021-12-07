@@ -10,13 +10,13 @@ import tensorflow_addons as tfa
 from tensorflow.keras import Input
 from model import LSTMGenerator, TransformerGenerator, Discriminator, Classifier
 from preprocess import TrainGenerator, TestGenerator, ClassifierGenerator
-from utils import AudioPool, MIDICreator, LRSchedule, get_saver, get_writer 
+from utils import AudioPool, MIDICreator, LRSchedule, get_saver, get_writer, MIDIReader
 
 
 parser = argparse.ArgumentParser(description='Music Style Transfer')
 parser.add_argument('--dataset_dir', dest='dataset_dir', default='../dataset/', help='path of the dataset')
 parser.add_argument('--type', dest='type', default='LSTM', help='LSTM/Transformer')
-parser.add_argument('--phase', dest='phase', default='train', help='train or test')
+parser.add_argument('--phase', dest='phase', default='train', help='train, test, or only_sample')
 parser.add_argument('--lrg', dest='lrg', type=float, default=0.00001, help='initial learning rate for generator')
 parser.add_argument('--lrd', dest='lrd', type=float, default=0.0002, help='initial learning rate for discriminator')
 parser.add_argument('--decay_step', dest='decay_step', type=int, default=10, help='# of epoch to decay lr')
@@ -26,6 +26,7 @@ parser.add_argument('--epoch', dest='epoch', type=int, default=100, help='# epoc
 parser.add_argument('--load_checkpoint', dest='load_checkpoint', default=None, help='load checkpoint')
 parser.add_argument('--load_classifier', dest='load_classifier', default=None, help='load checkpoint for classifier')
 parser.add_argument('--generate_midi', dest='generate_midi', default=0, help='number of epochs between generating midi files (0 means none are generated)')
+parser.add_argument('--sample_midi', dest='sample_midi', default=None, help='path for sample midi file to use as input')
 args = parser.parse_args()
 
 MAX_S = 0
@@ -40,39 +41,39 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool,
     gen_losses = []
     dis_losses = []
     # the length is the smallest one
-    for i, ((realA, _), (realB, _), (realABC, _)) in enumerate(zip(dataA, dataB, dataABC)): 
+    for i, ((realA, _), (realB, _), (realABC, _)) in enumerate(zip(dataA, dataB, dataABC)):
         # two tape
         # since we would like to update generator and discriminator respectively
-        with tf.GradientTape(persistent=True) as gen_tape, tf.GradientTape(persistent=True) as dis_tape: 
+        with tf.GradientTape(persistent=True) as gen_tape, tf.GradientTape(persistent=True) as dis_tape:
             # generator
             fakeA = genA(realB, realA, training=True)
             fakeB = genB(realA, realB, training=True)
 
             recA = genA(fakeB, realA, training=True)
             recB = genB(fakeA, realB, training=True)
-            
+
             # get previous fake data
             his_fakeA, his_fakeB = aud_pool(fakeA, fakeB)
             # get random noise
             noise = np.abs(np.random.normal(size=realA.shape))
-            
+
             # discriminator for A and B
             dis_realA = disA(realA+noise, training=True)
             dis_realB = disB(realB+noise, training=True)
 
             dis_fakeA = disA(fakeA+noise, training=True)
             dis_fakeB = disB(fakeB+noise, training=True)
-            
+
             dis_his_fakeA = disA(his_fakeA+noise, training=True)
             dis_his_fakeB = disB(his_fakeB+noise, training=True)
 
             # discriminator for A, B, C
             dis_realAm = disAm(realABC+noise, training=True)
             dis_realBm = disBm(realABC+noise, training=True)
-            
+
             dis_his_fakeAm = disA(his_fakeA+noise, training=True)
             dis_his_fakeBm = disB(his_fakeB+noise, training=True)
-            
+
             # loss
             gen_loss = genA.loss_fn(dis_fakeA, recB, realB)+genB.loss_fn(dis_fakeB, recA, realA)
 
@@ -86,7 +87,7 @@ def train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool,
         gen_var = genA.trainable_variables+genB.trainable_variables
         dis_var = disA.trainable_variables+disB.trainable_variables
         dis_var += disAm.trainable_variables+disBm.trainable_variables
-        
+
         gradients = gen_tape.gradient(target=gen_loss,
                                   sources=gen_var)
         GOPT.apply_gradients(zip(gradients, gen_var))
@@ -149,13 +150,13 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
     print("B: {:.3f}, BA: {:.3f}, BAB: {:.3f}, SB: {:.3f}".format(acc_B, acc_BA, acc_BAB, SB))
     S = (SA+SB)/2
     print("S: {:.3f}".format(S))
-    
+
     # save weights
     global MAX_S
     if saver and (S>MAX_S or epoch%5==0):
         MAX_S = S
         saver.save(os.path.join(checkpoint_path, '{:03d}-{:.3f}').format(epoch, S))
-    
+
     # tensorbaord
     if writer:
         with writer.as_default():
@@ -189,8 +190,25 @@ def test(classifier, genA, genB, test_genA, test_genB, epoch, writer, saver, che
             BAB = genA(BA, B_songs[i:i+1])
             BAfilename = "BA_{}_{}".format(epoch, i)
             BABfilename = "BAB_{}_{}".format(epoch, i)
-            midicreator.create_midi_from_piano_rolls(BA, os.path.join(midi_path, BAfilename))        
-            midicreator.create_midi_from_piano_rolls(BAB, os.path.join(midi_path, BABfilename))        
+            midicreator.create_midi_from_piano_rolls(BA, os.path.join(midi_path, BAfilename))
+            midicreator.create_midi_from_piano_rolls(BAB, os.path.join(midi_path, BABfilename))
+
+def transform_song(filename, genA, genB):
+    song_name = os.path.splitext(filename)[0]
+    mr = MIDIReader()
+    mc = MIDICreator()
+    sample_song = mr.create_piano_rolls_from_midi(filename)
+
+    base_file_name = song_name + "_base"
+    mc.create_midi_from_piano_rolls(sample_song, base_file_name)
+
+    A_song = genA(sample_song, sample_song)
+    A_file_name = song_name + "_A"
+    mc.create_midi_from_piano_rolls(A_song, A_file_name)
+
+    B_song = genB(sample_song, sample_song)
+    B_file_name = song_name + "_B"
+    mc.create_midi_from_piano_rolls(B_song, B_file_name)
 
 
 def main():
@@ -200,7 +218,7 @@ def main():
     # reuse the directory if loading checkpoint
     if args.load_checkpoint and os.path.exists(os.path.split(args.load_checkpoint)[0]):
         timestamp = args.load_checkpoint.split(os.sep)[-2]
-    
+
 
     save_dir = "./checkpoints/"
     log_dir = "./logs/"
@@ -212,9 +230,9 @@ def main():
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
     if not os.path.exists(logs_path):
-        os.makedirs(logs_path) 
+        os.makedirs(logs_path)
     if not os.path.exists(midi_path):
-        os.makedirs(midi_path) 
+        os.makedirs(midi_path)
     if not os.path.exists(os.path.join(midi_path, 'test')) and args.phase=='test':
         os.makedirs(os.path.join(midi_path, 'test'))
 
@@ -223,15 +241,15 @@ def main():
                                              'preprocess',
                                              'JC_J',
                                              'train'), batch=args.batch_size, shuffle=True)
-    dataB = TrainGenerator(os.path.join(args.dataset_dir, 
-                                        'preprocess', 
-                                        'JC_C', 
+    dataB = TrainGenerator(os.path.join(args.dataset_dir,
+                                        'preprocess',
+                                        'JC_C',
                                         'train'), batch=args.batch_size, shuffle=True)
-    dataABC = TrainGenerator(os.path.join(args.dataset_dir, 
-                                          'preprocess', 
+    dataABC = TrainGenerator(os.path.join(args.dataset_dir,
+                                          'preprocess',
                                           'JCP_mixed'), batch=args.batch_size, shuffle=True)
 
-    
+
     if args.type=='LSTM':
         genA = LSTMGenerator(args, "LSTMGeneratorA")
         genB = LSTMGenerator(args, "LSTMGeneratorB")
@@ -240,13 +258,13 @@ def main():
         genB = TransformerGenerator(args, "TransformerGeneratorB")
     else:
         genA = LSTMGenerator(args, "GeneratorA")
-        genB = LSTMGenerator(args, "GeneratorB")       
-  
+        genB = LSTMGenerator(args, "GeneratorB")
+
     disA = Discriminator(args, "DiscriminatorA")
     disB = Discriminator(args, "DiscriminatorB")
     disAm = Discriminator(args, "DiscriminatorAm")
     disBm = Discriminator(args, "DiscriminatorBm")
-    
+
     # get saver
     saver = get_saver(GOPT, DOPT, genA, genB, disA, disB, disAm, disBm, checkpoint_path)
     # load checkpoints
@@ -269,34 +287,37 @@ def main():
         classifier(Input(shape=(64, 84, 1)))
         classifier.load_weights(args.load_classifier)
         pathA = '../dataset/preprocess/JC_J/test/'
-        pathB = '../dataset/preprocess/JC_C/test/'            
-        val_genA = TestGenerator(pathA=pathA, 
-                                 pathB=None, 
-                                 A="jazz", 
-                                 B="classic", 
-                                 batch=args.batch_size, 
+        pathB = '../dataset/preprocess/JC_C/test/'
+        val_genA = TestGenerator(pathA=pathA,
+                                 pathB=None,
+                                 A="jazz",
+                                 B="classic",
+                                 batch=args.batch_size,
                                  shuffle=False)
-        val_genB = TestGenerator(pathA=None, 
-                                 pathB=pathB, 
-                                 A="jazz", 
-                                 B="classic", 
-                                 batch=args.batch_size, 
+        val_genB = TestGenerator(pathA=None,
+                                 pathB=pathB,
+                                 A="jazz",
+                                 B="classic",
+                                 batch=args.batch_size,
                                  shuffle=False)
 
         # compile model graph
         classifier.compile(
             loss=classifier.loss_fn,
             metrics=["accuracy"])
-    aud_pool = AudioPool()    
+    aud_pool = AudioPool()
     if args.phase=='train':
         for i in range(args.epoch):
             print(i)
             train(dataA, dataB, dataABC, genA, genB, disA, disB, disAm, disBm, aud_pool, i, writer)
             if args.load_classifier:
                 test(classifier, genA, genB, val_genA, val_genB, i, writer, saver, checkpoint_path, midi_path)
-    else:
+    if args.phase=='test':
         test(classifier, genA, genB, val_genA, val_genB, None, None, None, checkpoint_path, midi_path)
 
+    # try to generate a sample from a given file
+    if args.sample_midi != None:
+        transform_song(args.sample_midi, genA, genB)
 
 if __name__=="__main__":
     main()
