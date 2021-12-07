@@ -198,11 +198,10 @@ class TransformerGenerator(Model):
                                         layers.Dense(),
                                         Decoder()
                                         ])'''
-        # I have not added dimensions for anything yet
         self.emb_sz = 84
-        self.architecture = [# Embedding??
+        self.architecture = [# Can add embedding/encoder
                             PositionEncoder(64, self.emb_sz),
-                            TransformerBlock(self.emb_sz), # Self Attention
+                            TransformerBlock(self.emb_sz), # Attention
                             layers.Dense(84)
                             ]
 
