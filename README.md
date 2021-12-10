@@ -2,6 +2,18 @@
 
 This is music style transfer with tensorflow 2.0. One of the architectures is based on [1] and [2], but we implement it from scratch. 
 
+Original:
+
+[moonlight sonata](https://www.youtube.com/watch?v=xyh9PXa4gFI&list=PLeProSFvyWw68b5xNHqyqEdWtQu2TdpVw&index=1)
+
+ResNet (Jazz):
+
+[moonlight sonata](https://www.youtube.com/watch?v=7p_HqSkUg3c&list=PLeProSFvyWw68b5xNHqyqEdWtQu2TdpVw&index=2&t=1s)
+
+LSTM V2 (Jazz):
+
+[moonlight sonata](https://www.youtube.com/watch?v=xvBukVHvGYs&list=PLeProSFvyWw68b5xNHqyqEdWtQu2TdpVw&index=3)
+
 ## Our Environment
 - Operating System:
   - Archlinux/Windows10
