@@ -57,6 +57,14 @@ cd ./MusicStyleResNet
 python main.py --load_classifier ../Classifier/checkpoints/Classifier/{timestamp}/{checkpoint}.hdf5 --load_checkpoint ./checkpoints/ResNet/{timestamp}/{000-0.250-1} --phase test
 ```
 
+## Generate Sample Output
+```
+cd ./MusicStyle{model}
+```
+```
+python main.py --load_checkpoint ./checkpoints/ResNet/{timestamp}/{000-0.250-1} --phase sample --sample-midi {midi filepath}
+```
+
 # Train Genre Classifier 
 ```
 cd ./Classifier
