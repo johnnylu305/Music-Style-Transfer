@@ -27,9 +27,9 @@ LSTM V2 (Jazz):
   - tensorflow-2.6.0
 
 ## Downloading the Preprocessd Dataset
-[Dataset](https://drive.google.com/drive/u/2/folders/1BhQ58MjpiCXUqKqYfO4cEN1vw9FVZoEU)
+[Dataset](https://drive.google.com/file/d/1EfS1p3_B6X-ibbZCNwAuyMOpFIHgpE45/view?usp=sharing)
 ## Downloading the Pretrain Model for Classifier
-[Model](https://drive.google.com/drive/u/2/folders/14JcMWwWwcgDP3kXNV7HsmVgcKLiHBwJI)
+[Model](https://drive.google.com/drive/folders/1ErFniyIiK7ov3RFbWh0V-o8yxx73a1jG?usp=sharing)
 
 ## Train MusicStyle Transform with CNN 
 ```
